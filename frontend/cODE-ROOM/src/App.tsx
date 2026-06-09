@@ -1,10 +1,17 @@
-import CodeEditor from "./components/CodeEditor";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import Home from "./pages/Home";
+import Workspace from "./pages/Workspace";
 
 function App() {
   return (
-    <>
-      <CodeEditor />
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+
+        <Route path="/workspace/:workspaceId" element={<Workspace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
