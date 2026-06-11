@@ -8,12 +8,6 @@ interface FileExplorerProps {
   files: FileType[];
   activeFileId: number;
   setActiveFileId: (id: number) => void;
-}
-
-interface FileExplorerProps {
-  files: FileType[];
-  activeFileId: number;
-  setActiveFileId: (id: number) => void;
   addFile: () => void;
 }
 
