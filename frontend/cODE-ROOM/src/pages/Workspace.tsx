@@ -2,17 +2,30 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import CodeEditor from "../components/CodeEditor";
 import FileExplorer from "../components/FileExplorer";
+import { useEffect } from "react";
 
 function Workspace() {
   const { workspaceId } = useParams();
 
-  const [files, setFiles] = useState([
-    {
-      id: 1,
-      name: "main.cpp",
-      content: "",
-    },
-  ]);
+  const [files, setFiles] = useState(() => {
+    const saved = localStorage.getItem(`workspace-${workspaceId}`);
+
+    if (saved) {
+      return JSON.parse(saved);
+    }
+
+    return [
+      {
+        id: 1,
+        name: "main.cpp",
+        content: "",
+      },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem(`workspace-${workspaceId}`, JSON.stringify(files));
+  }, [files, workspaceId]);
 
   const [activeFileId, setActiveFileId] = useState(1);
 
