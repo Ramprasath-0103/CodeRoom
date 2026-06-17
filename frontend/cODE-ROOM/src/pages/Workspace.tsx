@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import CodeEditor from "../components/CodeEditor";
 import FileExplorer from "../components/FileExplorer";
 import { socket } from "../socket";
+import { useRef } from "react";
 
 function Workspace() {
   const { workspaceId } = useParams();
-
+  const isRemoteUpdate = useRef(false);
   const [files, setFiles] = useState(() => {
     const saved = localStorage.getItem(`workspace-${workspaceId}`);
 
@@ -32,6 +33,22 @@ function Workspace() {
   }, [workspaceId]);
 
   useEffect(() => {
+    socket.on("file-change", ({ fileId, content }) => {
+      isRemoteUpdate.current = true;
+
+      setFiles((prevFiles) =>
+        prevFiles.map((file) =>
+          file.id === fileId ? { ...file, content } : file,
+        ),
+      );
+    });
+
+    return () => {
+      socket.off("file-change");
+    };
+  }, []);
+
+  useEffect(() => {
     socket.on("message", (msg) => {
       console.log("Received:", msg);
     });
@@ -48,11 +65,22 @@ function Workspace() {
   const activeFile = files.find((file) => file.id === activeFileId);
 
   function handleEditorChange(value: string) {
+    if (isRemoteUpdate.current) {
+      isRemoteUpdate.current = false;
+      return;
+    }
+
     setFiles((prevFiles) =>
       prevFiles.map((file) =>
         file.id === activeFileId ? { ...file, content: value } : file,
       ),
     );
+
+    socket.emit("file-change", {
+      workspaceId,
+      fileId: activeFileId,
+      content: value,
+    });
   }
 
   function addFile() {

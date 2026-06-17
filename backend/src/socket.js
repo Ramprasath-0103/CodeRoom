@@ -20,6 +20,12 @@ export function initializeSocket(server) {
       );
     });
 
+    socket.on("file-change", (data) => {
+    socket
+    .to(data.workspaceId)
+    .emit("file-change", data);
+    });
+
     socket.on(
       "message",
       ({ workspaceId, message }) => {
@@ -36,5 +42,14 @@ export function initializeSocket(server) {
         socket.id
       );
     });
+
+    socket.on("file-change", (data) => {
+  console.log("FILE CHANGE:", data);
+
+  socket
+    .to(data.workspaceId)
+    .emit("file-change", data);
+});
+
   });
 }
