@@ -1,8 +1,8 @@
 import { useParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CodeEditor from "../components/CodeEditor";
 import FileExplorer from "../components/FileExplorer";
-import { useEffect } from "react";
+import { socket } from "../socket";
 
 function Workspace() {
   const { workspaceId } = useParams();
@@ -23,11 +23,27 @@ function Workspace() {
     ];
   });
 
+  const [activeFileId, setActiveFileId] = useState(1);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    socket.emit("join-workspace", workspaceId);
+  }, [workspaceId]);
+
+  useEffect(() => {
+    socket.on("message", (msg) => {
+      console.log("Received:", msg);
+    });
+
+    return () => {
+      socket.off("message");
+    };
+  }, []);
+
   useEffect(() => {
     localStorage.setItem(`workspace-${workspaceId}`, JSON.stringify(files));
   }, [files, workspaceId]);
-
-  const [activeFileId, setActiveFileId] = useState(1);
 
   const activeFile = files.find((file) => file.id === activeFileId);
 
@@ -55,9 +71,19 @@ function Workspace() {
     setActiveFileId(newFile.id);
   }
 
+  function testRoom() {
+    socket.emit("message", {
+      workspaceId,
+      message: "hello",
+    });
+  }
+
   return (
     <div>
       <h1>Workspace : {workspaceId}</h1>
+
+      <button onClick={testRoom}>Test Room</button>
+
       <div
         style={{
           display: "flex",
