@@ -1,13 +1,24 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import CodeEditor from "../components/CodeEditor";
 import FileExplorer from "../components/FileExplorer";
 import { socket } from "../socket";
-import { useRef } from "react";
 
 function Workspace() {
   const { workspaceId } = useParams();
+
+  let username = localStorage.getItem("username");
+
+  if (!username) {
+    username = `User-${Math.floor(Math.random() * 1000)}`;
+
+    localStorage.setItem("username", username);
+  }
+
   const isRemoteUpdate = useRef(false);
+
+  const [users, setUsers] = useState<any[]>([]);
+
   const [files, setFiles] = useState(() => {
     const saved = localStorage.getItem(`workspace-${workspaceId}`);
 
@@ -27,10 +38,23 @@ function Workspace() {
   const [activeFileId, setActiveFileId] = useState(1);
 
   useEffect(() => {
-    if (!workspaceId) return;
+    if (!workspaceId || !username) return;
 
-    socket.emit("join-workspace", workspaceId);
-  }, [workspaceId]);
+    socket.emit("join-workspace", {
+      workspaceId,
+      username,
+    });
+  }, [workspaceId, username]);
+
+  useEffect(() => {
+    socket.on("users-update", (users) => {
+      setUsers(users);
+    });
+
+    return () => {
+      socket.off("users-update");
+    };
+  }, []);
 
   useEffect(() => {
     socket.on("file-change", ({ fileId, content }) => {
@@ -109,6 +133,14 @@ function Workspace() {
   return (
     <div>
       <h1>Workspace : {workspaceId}</h1>
+
+      <h3>Online Users ({users.length})</h3>
+
+      <ul>
+        {users.map((user) => (
+          <li key={user.socketId}>🟢 {user.username}</li>
+        ))}
+      </ul>
 
       <button onClick={testRoom}>Test Room</button>
 
