@@ -13,6 +13,26 @@ export function initializeSocket(server) {
   io.on("connection", (socket) => {
     console.log("Connected:", socket.id);
 
+
+    socket.on(
+      "typing",
+      ({ workspaceId, username }) => {
+        socket
+          .to(workspaceId)
+          .emit("typing", username);
+
+      }
+    );
+
+    socket.on(
+      "stop-typing",
+      ({ workspaceId }) => {
+        socket
+          .to(workspaceId)
+          .emit("stop-typing");
+      }
+    );
+
     socket.on(
       "join-workspace",
       ({ workspaceId, username }) => {
@@ -25,15 +45,16 @@ export function initializeSocket(server) {
           workspaceUsers[workspaceId] = [];
         }
 
-       workspaceUsers[workspaceId] =
-  workspaceUsers[workspaceId].filter(
-    (user) => user.socketId !== socket.id
-  );
+        workspaceUsers[workspaceId] =
+          workspaceUsers[workspaceId].filter(
+            (user) =>
+              user.socketId !== socket.id
+          );
 
-workspaceUsers[workspaceId].push({
-  socketId: socket.id,
-  username,
-});
+        workspaceUsers[workspaceId].push({
+          socketId: socket.id,
+          username,
+        });
 
         io.to(workspaceId).emit(
           "users-update",
@@ -46,11 +67,13 @@ workspaceUsers[workspaceId].push({
       }
     );
 
+
     socket.on("file-change", (data) => {
       socket
         .to(data.workspaceId)
         .emit("file-change", data);
     });
+
 
     socket.on(
       "message",
@@ -61,6 +84,7 @@ workspaceUsers[workspaceId].push({
         );
       }
     );
+
 
     socket.on("disconnect", () => {
       const workspaceId =
@@ -73,14 +97,19 @@ workspaceUsers[workspaceId].push({
               user.socketId !== socket.id
           );
 
-          if (workspaceUsers[workspaceId].length === 0) {
-  delete workspaceUsers[workspaceId];
-}
-
-        io.to(workspaceId).emit(
-          "users-update",
+        if (
           workspaceUsers[workspaceId]
-        );
+            .length === 0
+        ) {
+          delete workspaceUsers[
+            workspaceId
+          ];
+        } else {
+          io.to(workspaceId).emit(
+            "users-update",
+            workspaceUsers[workspaceId]
+          );
+        }
       }
 
       console.log(

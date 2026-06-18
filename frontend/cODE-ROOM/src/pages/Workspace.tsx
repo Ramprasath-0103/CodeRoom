@@ -7,16 +7,15 @@ import { socket } from "../socket";
 function Workspace() {
   const { workspaceId } = useParams();
 
-  let username = localStorage.getItem("username");
-
-  if (!username) {
-    username = `User-${Math.floor(Math.random() * 1000)}`;
-
-    localStorage.setItem("username", username);
-  }
+  const username = useRef(
+    localStorage.getItem("username") ||
+      `User-${Math.floor(Math.random() * 1000)}`,
+  ).current;
 
   const isRemoteUpdate = useRef(false);
+  const typingTimeout = useRef<any>(null);
 
+  const [typingUser, setTypingUser] = useState("");
   const [users, setUsers] = useState<any[]>([]);
 
   const [files, setFiles] = useState(() => {
@@ -38,7 +37,11 @@ function Workspace() {
   const [activeFileId, setActiveFileId] = useState(1);
 
   useEffect(() => {
-    if (!workspaceId || !username) return;
+    localStorage.setItem("username", username);
+  }, [username]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
 
     socket.emit("join-workspace", {
       workspaceId,
@@ -53,6 +56,21 @@ function Workspace() {
 
     return () => {
       socket.off("users-update");
+    };
+  }, []);
+
+  useEffect(() => {
+    socket.on("typing", (username) => {
+      setTypingUser(username);
+    });
+
+    socket.on("stop-typing", () => {
+      setTypingUser("");
+    });
+
+    return () => {
+      socket.off("typing");
+      socket.off("stop-typing");
     };
   }, []);
 
@@ -94,9 +112,27 @@ function Workspace() {
       return;
     }
 
+    socket.emit("typing", {
+      workspaceId,
+      username,
+    });
+
+    clearTimeout(typingTimeout.current);
+
+    typingTimeout.current = setTimeout(() => {
+      socket.emit("stop-typing", {
+        workspaceId,
+      });
+    }, 1000);
+
     setFiles((prevFiles) =>
       prevFiles.map((file) =>
-        file.id === activeFileId ? { ...file, content: value } : file,
+        file.id === activeFileId
+          ? {
+              ...file,
+              content: value,
+            }
+          : file,
       ),
     );
 
@@ -141,6 +177,8 @@ function Workspace() {
           <li key={user.socketId}>🟢 {user.username}</li>
         ))}
       </ul>
+
+      {typingUser && <p>✍️ {typingUser} is typing...</p>}
 
       <button onClick={testRoom}>Test Room</button>
 
