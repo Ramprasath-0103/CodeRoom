@@ -34,6 +34,19 @@ export function initializeSocket(server) {
     );
 
     socket.on(
+  "cursor-move",
+  ({ workspaceId, username, position }) => {
+    socket.to(workspaceId).emit(
+      "cursor-move",
+      {
+        username,
+        position,
+      }
+    );
+  }
+);
+
+    socket.on(
       "join-workspace",
       ({ workspaceId, username }) => {
         socket.join(workspaceId);

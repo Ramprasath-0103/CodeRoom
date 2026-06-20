@@ -3,21 +3,27 @@ import LanguageSelector from "./LanguageSelector";
 import { useRef, useState } from "react";
 import { CODE_SNIPPETS } from "../constants";
 import Output from "./Output";
+import { socket } from "../socket";
 
 interface CodeEditorProps {
   value: string;
   onChange: (value: string) => void;
+  workspaceId: string;
+  username: string;
 }
 
-function CodeEditor({ value, onChange }: CodeEditorProps) {
+function CodeEditor({
+  value,
+  onChange,
+  workspaceId,
+  username,
+}: CodeEditorProps) {
   const editorRef = useRef(null);
   const [language, setLanguage] = useState("javascript");
 
   function onSelect(lang: string) {
     setLanguage(lang);
 
-    // Optional:
-    // If the file is empty, load starter template.
     if (!value) {
       onChange(CODE_SNIPPETS[lang] ?? "");
     }
@@ -26,6 +32,18 @@ function CodeEditor({ value, onChange }: CodeEditorProps) {
   function onMount(editor: any) {
     editorRef.current = editor;
     editor.focus();
+
+    editor.onDidChangeCursorPosition((e: any) => {
+      socket.emit("cursor-move", {
+        workspaceId,
+        username,
+        position: {
+          line: e.position.lineNumber,
+          column: e.position.column,
+        },
+      });
+      console.log("CURSOR", e.position.lineNumber, e.position.column);
+    });
   }
 
   return (
@@ -43,20 +61,16 @@ function CodeEditor({ value, onChange }: CodeEditorProps) {
           flexDirection: "column",
         }}
       >
-        <div>
-          <LanguageSelector language={language} onSelect={onSelect} />
-        </div>
+        <LanguageSelector language={language} onSelect={onSelect} />
 
-        <div style={{ flex: 1 }}>
-          <Editor
-            height="90vh"
-            language={language}
-            value={value}
-            theme="vs-dark"
-            onMount={onMount}
-            onChange={(val) => onChange(val ?? "")}
-          />
-        </div>
+        <Editor
+          height="90vh"
+          language={language}
+          value={value}
+          theme="vs-dark"
+          onMount={onMount}
+          onChange={(val) => onChange(val ?? "")}
+        />
       </div>
 
       <div

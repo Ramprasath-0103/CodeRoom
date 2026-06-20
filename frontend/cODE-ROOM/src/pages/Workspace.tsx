@@ -18,6 +18,10 @@ function Workspace() {
   const [typingUser, setTypingUser] = useState("");
   const [users, setUsers] = useState<any[]>([]);
 
+  const [cursorPositions, setCursorPositions] = useState<Record<string, any>>(
+    {},
+  );
+
   const [files, setFiles] = useState(() => {
     const saved = localStorage.getItem(`workspace-${workspaceId}`);
 
@@ -49,6 +53,7 @@ function Workspace() {
     });
   }, [workspaceId, username]);
 
+  // Users
   useEffect(() => {
     socket.on("users-update", (users) => {
       setUsers(users);
@@ -59,6 +64,23 @@ function Workspace() {
     };
   }, []);
 
+  // Cursor Sharing
+  useEffect(() => {
+    socket.on("cursor-move", ({ username, position }) => {
+      console.log("CURSOR RECEIVED", username, position);
+
+      setCursorPositions((prev) => ({
+        ...prev,
+        [username]: position,
+      }));
+    });
+
+    return () => {
+      socket.off("cursor-move");
+    };
+  }, []);
+
+  // Typing
   useEffect(() => {
     socket.on("typing", (username) => {
       setTypingUser(username);
@@ -74,6 +96,7 @@ function Workspace() {
     };
   }, []);
 
+  // File Sync
   useEffect(() => {
     socket.on("file-change", ({ fileId, content }) => {
       isRemoteUpdate.current = true;
@@ -174,7 +197,18 @@ function Workspace() {
 
       <ul>
         {users.map((user) => (
-          <li key={user.socketId}>🟢 {user.username}</li>
+          <li key={user.socketId}>
+            🟢 {user.username}
+            {cursorPositions[user.username] && (
+              <>
+                {" "}
+                (L
+                {cursorPositions[user.username].line}
+                :C
+                {cursorPositions[user.username].column})
+              </>
+            )}
+          </li>
         ))}
       </ul>
 
@@ -198,6 +232,8 @@ function Workspace() {
           <CodeEditor
             value={activeFile?.content || ""}
             onChange={handleEditorChange}
+            workspaceId={workspaceId || ""}
+            username={username}
           />
         </div>
       </div>
