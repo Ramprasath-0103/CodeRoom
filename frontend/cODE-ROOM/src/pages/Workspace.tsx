@@ -40,6 +40,12 @@ function Workspace() {
 
   const [activeFileId, setActiveFileId] = useState(1);
 
+  const activeFileIdRef = useRef(activeFileId);
+
+  useEffect(() => {
+    activeFileIdRef.current = activeFileId;
+  }, [activeFileId]);
+
   useEffect(() => {
     localStorage.setItem("username", username);
   }, [username]);
@@ -67,8 +73,6 @@ function Workspace() {
   // Cursor Sharing
   useEffect(() => {
     socket.on("cursor-move", ({ username, position }) => {
-      console.log("CURSOR RECEIVED", username, position);
-
       setCursorPositions((prev) => ({
         ...prev,
         [username]: position,
@@ -82,7 +86,11 @@ function Workspace() {
 
   // Typing
   useEffect(() => {
-    socket.on("typing", (username) => {
+    socket.on("typing", ({ username, fileId }) => {
+      if (fileId !== activeFileIdRef.current) {
+        return;
+      }
+
       setTypingUser(username);
     });
 
@@ -114,6 +122,35 @@ function Workspace() {
   }, []);
 
   useEffect(() => {
+    socket.on("create-file", ({ file }) => {
+      setFiles((prev) => [...prev, file]);
+    });
+
+    socket.on("rename-file", ({ fileId, newName }) => {
+      setFiles((prev) =>
+        prev.map((file) =>
+          file.id === fileId
+            ? {
+                ...file,
+                name: newName,
+              }
+            : file,
+        ),
+      );
+    });
+
+    socket.on("delete-file", ({ fileId }) => {
+      setFiles((prev) => prev.filter((file) => file.id !== fileId));
+    });
+
+    return () => {
+      socket.off("create-file");
+      socket.off("rename-file");
+      socket.off("delete-file");
+    };
+  }, []);
+
+  useEffect(() => {
     socket.on("message", (msg) => {
       console.log("Received:", msg);
     });
@@ -138,6 +175,7 @@ function Workspace() {
     socket.emit("typing", {
       workspaceId,
       username,
+      fileId: activeFileId,
     });
 
     clearTimeout(typingTimeout.current);
@@ -166,6 +204,29 @@ function Workspace() {
     });
   }
 
+  function renameFile(fileId: number) {
+    const newName = prompt("Enter new file name");
+
+    if (!newName) return;
+
+    setFiles((prev) =>
+      prev.map((file) =>
+        file.id === fileId
+          ? {
+              ...file,
+              name: newName,
+            }
+          : file,
+      ),
+    );
+
+    socket.emit("rename-file", {
+      workspaceId,
+      fileId,
+      newName,
+    });
+  }
+
   function addFile() {
     const fileName = prompt("Enter file name");
 
@@ -179,7 +240,27 @@ function Workspace() {
 
     setFiles((prev) => [...prev, newFile]);
 
+    socket.emit("create-file", {
+      workspaceId,
+      file: newFile,
+    });
+
     setActiveFileId(newFile.id);
+  }
+
+  function deleteFile(fileId: number) {
+    const remainingFiles = files.filter((file) => file.id !== fileId);
+
+    setFiles(remainingFiles);
+
+    socket.emit("delete-file", {
+      workspaceId,
+      fileId,
+    });
+
+    if (activeFileId === fileId && remainingFiles.length > 0) {
+      setActiveFileId(remainingFiles[0].id);
+    }
   }
 
   function testRoom() {
@@ -226,6 +307,8 @@ function Workspace() {
           activeFileId={activeFileId}
           setActiveFileId={setActiveFileId}
           addFile={addFile}
+          renameFile={renameFile}
+          deleteFile={deleteFile}
         />
 
         <div style={{ flex: 1 }}>

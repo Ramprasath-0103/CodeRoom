@@ -15,14 +15,17 @@ export function initializeSocket(server) {
 
 
     socket.on(
+  "typing",
+  ({ workspaceId, username, fileId }) => {
+    socket.to(workspaceId).emit(
       "typing",
-      ({ workspaceId, username }) => {
-        socket
-          .to(workspaceId)
-          .emit("typing", username);
-
+      {
+        username,
+        fileId,
       }
     );
+  }
+);
 
     socket.on(
       "stop-typing",
@@ -87,6 +90,23 @@ export function initializeSocket(server) {
         .emit("file-change", data);
     });
 
+    socket.on("create-file", (data) => {
+    socket
+      .to(data.workspaceId)
+      .emit("create-file", data);
+    });
+
+  socket.on("rename-file", (data) => {
+    socket
+      .to(data.workspaceId)
+      .emit("rename-file", data);
+    });
+
+  socket.on("delete-file", (data) => {
+    socket
+      .to(data.workspaceId)
+      .emit("delete-file", data);
+    });
 
     socket.on(
       "message",

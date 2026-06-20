@@ -9,6 +9,8 @@ interface FileExplorerProps {
   activeFileId: number;
   setActiveFileId: (id: number) => void;
   addFile: () => void;
+  renameFile: (id: number) => void;
+  deleteFile: (id: number) => void;
 }
 
 function FileExplorer({
@@ -16,11 +18,13 @@ function FileExplorer({
   activeFileId,
   setActiveFileId,
   addFile,
+  renameFile,
+  deleteFile,
 }: FileExplorerProps) {
   return (
     <div
       style={{
-        width: "200px",
+        width: "250px",
         borderRight: "1px solid gray",
         padding: "10px",
       }}
@@ -41,16 +45,36 @@ function FileExplorer({
       {files.map((file) => (
         <div
           key={file.id}
-          onClick={() => setActiveFileId(file.id)}
           style={{
-            cursor: "pointer",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
             padding: "8px",
             marginBottom: "4px",
             backgroundColor: file.id === activeFileId ? "#333" : "transparent",
             color: file.id === activeFileId ? "white" : "inherit",
           }}
         >
-          {file.name}
+          <span
+            onClick={() => setActiveFileId(file.id)}
+            style={{
+              cursor: "pointer",
+              flex: 1,
+            }}
+          >
+            {file.name}
+          </span>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "4px",
+            }}
+          >
+            <button onClick={() => renameFile(file.id)}>✏️</button>
+
+            <button onClick={() => deleteFile(file.id)}>🗑️</button>
+          </div>
         </div>
       ))}
     </div>
