@@ -10,6 +10,7 @@ interface CodeEditorProps {
   onChange: (value: string) => void;
   workspaceId: string;
   username: string;
+  activeFileId: number;
 }
 
 function CodeEditor({
@@ -17,6 +18,7 @@ function CodeEditor({
   onChange,
   workspaceId,
   username,
+  activeFileId,
 }: CodeEditorProps) {
   const editorRef = useRef(null);
   const [language, setLanguage] = useState("javascript");
@@ -37,6 +39,7 @@ function CodeEditor({
       socket.emit("cursor-move", {
         workspaceId,
         username,
+        fileId: activeFileId,
         position: {
           line: e.position.lineNumber,
           column: e.position.column,

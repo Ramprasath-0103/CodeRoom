@@ -72,10 +72,14 @@ function Workspace() {
 
   // Cursor Sharing
   useEffect(() => {
-    socket.on("cursor-move", ({ username, position }) => {
+    socket.on("cursor-move", ({ username, fileId, position }) => {
       setCursorPositions((prev) => ({
         ...prev,
-        [username]: position,
+        [username]: {
+          fileId,
+          line: position.line,
+          column: position.column,
+        },
       }));
     });
 
@@ -283,7 +287,11 @@ function Workspace() {
             {cursorPositions[user.username] && (
               <>
                 {" "}
-                (L
+                [
+                {files.find(
+                  (f) => f.id === cursorPositions[user.username].fileId,
+                )?.name || "Unknown"}
+                ] (L
                 {cursorPositions[user.username].line}
                 :C
                 {cursorPositions[user.username].column})
@@ -317,6 +325,7 @@ function Workspace() {
             onChange={handleEditorChange}
             workspaceId={workspaceId || ""}
             username={username}
+            activeFileId={activeFileId}
           />
         </div>
       </div>

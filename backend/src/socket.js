@@ -38,11 +38,17 @@ export function initializeSocket(server) {
 
     socket.on(
   "cursor-move",
-  ({ workspaceId, username, position }) => {
+  ({
+    workspaceId,
+    username,
+    fileId,
+    position,
+  }) => {
     socket.to(workspaceId).emit(
       "cursor-move",
       {
         username,
+        fileId,
         position,
       }
     );
