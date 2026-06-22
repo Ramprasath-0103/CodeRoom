@@ -106,6 +106,18 @@ export function initializeSocket(server) {
         .emit("file-change", data);
     });
 
+    socket.on(
+  "language-change",
+  ({ workspaceId, language }) => {
+    socket.to(workspaceId).emit(
+      "language-change",
+      {
+        language,
+      }
+    );
+  }
+);
+
     // File Explorer Sync
     socket.on("create-file", (data) => {
       socket

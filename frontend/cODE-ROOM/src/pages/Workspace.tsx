@@ -12,6 +12,8 @@ function Workspace() {
       `User-${Math.floor(Math.random() * 1000)}`,
   ).current;
 
+  const [language, setLanguage] = useState("javascript");
+
   const [notifications, setNotifications] = useState<string[]>([]);
 
   const isRemoteUpdate = useRef(false);
@@ -145,6 +147,17 @@ function Workspace() {
   }, []);
 
   useEffect(() => {
+    socket.on("language-change", ({ language }) => {
+      console.log("LANGUAGE RECEIVED", language);
+      setLanguage(language);
+    });
+
+    return () => {
+      socket.off("language-change");
+    };
+  }, []);
+
+  useEffect(() => {
     socket.on("create-file", ({ file }) => {
       setFiles((prev) => [...prev, file]);
     });
@@ -225,6 +238,15 @@ function Workspace() {
       workspaceId,
       fileId: activeFileId,
       content: value,
+    });
+  }
+
+  function handleLanguageChange(language: string) {
+    setLanguage(language);
+
+    socket.emit("language-change", {
+      workspaceId,
+      language,
     });
   }
 
@@ -363,6 +385,8 @@ function Workspace() {
             workspaceId={workspaceId || ""}
             username={username}
             activeFileId={activeFileId}
+            language={language}
+            onLanguageChange={handleLanguageChange}
           />
         </div>
       </div>

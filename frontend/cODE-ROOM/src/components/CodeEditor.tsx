@@ -11,6 +11,8 @@ interface CodeEditorProps {
   workspaceId: string;
   username: string;
   activeFileId: number;
+  language: string;
+  onLanguageChange: (lang: string) => void;
 }
 
 function CodeEditor({
@@ -19,19 +21,19 @@ function CodeEditor({
   workspaceId,
   username,
   activeFileId,
+  language,
+  onLanguageChange,
 }: CodeEditorProps) {
   const editorRef = useRef<any>(null);
 
   const activeFileIdRef = useRef(activeFileId);
-
-  const [language, setLanguage] = useState("javascript");
 
   useEffect(() => {
     activeFileIdRef.current = activeFileId;
   }, [activeFileId]);
 
   function onSelect(lang: string) {
-    setLanguage(lang);
+    onLanguageChange(lang);
 
     if (!value) {
       onChange(CODE_SNIPPETS[lang] ?? "");
