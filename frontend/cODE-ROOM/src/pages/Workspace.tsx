@@ -83,6 +83,24 @@ function Workspace() {
     };
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCursorPositions((prev) => {
+        const updated = { ...prev };
+
+        Object.keys(updated).forEach((username) => {
+          if (Date.now() - updated[username].timestamp > 10000) {
+            delete updated[username];
+          }
+        });
+
+        return updated;
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Cursor Sharing
   useEffect(() => {
     socket.on("cursor-move", ({ username, fileId, position }) => {
@@ -92,6 +110,7 @@ function Workspace() {
           fileId,
           line: position.line,
           column: position.column,
+          timestamp: Date.now(),
         },
       }));
     });
@@ -324,7 +343,12 @@ function Workspace() {
 
       <ul>
         {users.map((user) => (
-          <li key={user.socketId}>
+          <li
+            key={user.socketId}
+            style={{
+              marginBottom: "10px",
+            }}
+          >
             🟢 {user.username}
             {cursorPositions[user.username] && (
               <>
