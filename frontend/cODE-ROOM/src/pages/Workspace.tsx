@@ -17,7 +17,7 @@ function Workspace() {
   const isRemoteUpdate = useRef(false);
   const typingTimeout = useRef<any>(null);
 
-  const [typingUser, setTypingUser] = useState("");
+  const [typingUsers, setTypingUsers] = useState<Record<string, any>>({});
   const [users, setUsers] = useState<any[]>([]);
 
   const [cursorPositions, setCursorPositions] = useState<Record<string, any>>(
@@ -42,8 +42,6 @@ function Workspace() {
 
   const [activeFileId, setActiveFileId] = useState(1);
 
-  const activeFileIdRef = useRef(activeFileId);
-
   useEffect(() => {
     socket.on("user-joined", (username) => {
       setNotifications((prev) => [`${username} joined`, ...prev]);
@@ -58,10 +56,6 @@ function Workspace() {
       socket.off("user-left");
     };
   }, []);
-
-  useEffect(() => {
-    activeFileIdRef.current = activeFileId;
-  }, [activeFileId]);
 
   useEffect(() => {
     localStorage.setItem("username", username);
@@ -108,15 +102,23 @@ function Workspace() {
   // Typing
   useEffect(() => {
     socket.on("typing", ({ username, fileId }) => {
-      if (fileId !== activeFileIdRef.current) {
-        return;
-      }
-
-      setTypingUser(username);
+      setTypingUsers((prev) => ({
+        ...prev,
+        [username]: {
+          fileId,
+          timestamp: Date.now(),
+        },
+      }));
     });
 
-    socket.on("stop-typing", () => {
-      setTypingUser("");
+    socket.on("stop-typing", ({ username }) => {
+      setTypingUsers((prev) => {
+        const copy = { ...prev };
+
+        delete copy[username];
+
+        return copy;
+      });
     });
 
     return () => {
@@ -204,6 +206,7 @@ function Workspace() {
     typingTimeout.current = setTimeout(() => {
       socket.emit("stop-typing", {
         workspaceId,
+        username,
       });
     }, 1000);
 
@@ -326,7 +329,16 @@ function Workspace() {
         ))}
       </ul>
 
-      {typingUser && <p>✍️ {typingUser} is typing...</p>}
+      <h3>Typing</h3>
+
+      <ul>
+        {Object.entries(typingUsers).map(([username, data]: any) => (
+          <li key={username}>
+            ✍️ {username} typing in{" "}
+            {files.find((f) => f.id === data.fileId)?.name || "Unknown"}
+          </li>
+        ))}
+      </ul>
 
       <button onClick={testRoom}>Test Room</button>
 

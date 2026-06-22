@@ -28,13 +28,16 @@ export function initializeSocket(server) {
     );
 
     socket.on(
+  "stop-typing",
+  ({ workspaceId, username }) => {
+    socket.to(workspaceId).emit(
       "stop-typing",
-      ({ workspaceId }) => {
-        socket
-          .to(workspaceId)
-          .emit("stop-typing");
+      {
+        username,
       }
     );
+  }
+);
 
     // Cursor Sharing
     socket.on(

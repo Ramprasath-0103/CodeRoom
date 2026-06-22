@@ -1,6 +1,6 @@
 import Editor from "@monaco-editor/react";
 import LanguageSelector from "./LanguageSelector";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { CODE_SNIPPETS } from "../constants";
 import Output from "./Output";
 import { socket } from "../socket";
@@ -20,8 +20,15 @@ function CodeEditor({
   username,
   activeFileId,
 }: CodeEditorProps) {
-  const editorRef = useRef(null);
+  const editorRef = useRef<any>(null);
+
+  const activeFileIdRef = useRef(activeFileId);
+
   const [language, setLanguage] = useState("javascript");
+
+  useEffect(() => {
+    activeFileIdRef.current = activeFileId;
+  }, [activeFileId]);
 
   function onSelect(lang: string) {
     setLanguage(lang);
@@ -36,16 +43,24 @@ function CodeEditor({
     editor.focus();
 
     editor.onDidChangeCursorPosition((e: any) => {
+      const currentFileId = activeFileIdRef.current;
+
+      console.log(
+        "CURSOR EMIT",
+        currentFileId,
+        e.position.lineNumber,
+        e.position.column,
+      );
+
       socket.emit("cursor-move", {
         workspaceId,
         username,
-        fileId: activeFileId,
+        fileId: currentFileId,
         position: {
           line: e.position.lineNumber,
           column: e.position.column,
         },
       });
-      console.log("CURSOR", e.position.lineNumber, e.position.column);
     });
   }
 
@@ -67,6 +82,7 @@ function CodeEditor({
         <LanguageSelector language={language} onSelect={onSelect} />
 
         <Editor
+          key={activeFileId}
           height="90vh"
           language={language}
           value={value}
@@ -83,6 +99,7 @@ function CodeEditor({
         }}
       >
         <br />
+
         <Output editorRef={editorRef} language={language} />
       </div>
     </div>
