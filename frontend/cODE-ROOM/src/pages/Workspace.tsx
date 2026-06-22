@@ -12,6 +12,8 @@ function Workspace() {
       `User-${Math.floor(Math.random() * 1000)}`,
   ).current;
 
+  const [notifications, setNotifications] = useState<string[]>([]);
+
   const isRemoteUpdate = useRef(false);
   const typingTimeout = useRef<any>(null);
 
@@ -41,6 +43,21 @@ function Workspace() {
   const [activeFileId, setActiveFileId] = useState(1);
 
   const activeFileIdRef = useRef(activeFileId);
+
+  useEffect(() => {
+    socket.on("user-joined", (username) => {
+      setNotifications((prev) => [`${username} joined`, ...prev]);
+    });
+
+    socket.on("user-left", (username) => {
+      setNotifications((prev) => [`${username} left`, ...prev]);
+    });
+
+    return () => {
+      socket.off("user-joined");
+      socket.off("user-left");
+    };
+  }, []);
 
   useEffect(() => {
     activeFileIdRef.current = activeFileId;
@@ -298,6 +315,14 @@ function Workspace() {
               </>
             )}
           </li>
+        ))}
+      </ul>
+
+      <h3>Activity</h3>
+
+      <ul>
+        {notifications.slice(0, 5).map((msg, index) => (
+          <li key={index}>{msg}</li>
         ))}
       </ul>
 

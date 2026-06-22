@@ -13,19 +13,19 @@ export function initializeSocket(server) {
   io.on("connection", (socket) => {
     console.log("Connected:", socket.id);
 
-
+    // Typing
     socket.on(
-  "typing",
-  ({ workspaceId, username, fileId }) => {
-    socket.to(workspaceId).emit(
       "typing",
-      {
-        username,
-        fileId,
+      ({ workspaceId, username, fileId }) => {
+        socket.to(workspaceId).emit(
+          "typing",
+          {
+            username,
+            fileId,
+          }
+        );
       }
     );
-  }
-);
 
     socket.on(
       "stop-typing",
@@ -36,25 +36,27 @@ export function initializeSocket(server) {
       }
     );
 
+    // Cursor Sharing
     socket.on(
-  "cursor-move",
-  ({
-    workspaceId,
-    username,
-    fileId,
-    position,
-  }) => {
-    socket.to(workspaceId).emit(
       "cursor-move",
-      {
+      ({
+        workspaceId,
         username,
         fileId,
         position,
+      }) => {
+        socket.to(workspaceId).emit(
+          "cursor-move",
+          {
+            username,
+            fileId,
+            position,
+          }
+        );
       }
     );
-  }
-);
 
+    // Join Workspace
     socket.on(
       "join-workspace",
       ({ workspaceId, username }) => {
@@ -83,37 +85,44 @@ export function initializeSocket(server) {
           workspaceUsers[workspaceId]
         );
 
+        socket.to(workspaceId).emit(
+          "user-joined",
+          username
+        );
+
         console.log(
           `${username} joined ${workspaceId}`
         );
       }
     );
 
-
+    // File Content Sync
     socket.on("file-change", (data) => {
       socket
         .to(data.workspaceId)
         .emit("file-change", data);
     });
 
+    // File Explorer Sync
     socket.on("create-file", (data) => {
-    socket
-      .to(data.workspaceId)
-      .emit("create-file", data);
+      socket
+        .to(data.workspaceId)
+        .emit("create-file", data);
     });
 
-  socket.on("rename-file", (data) => {
-    socket
-      .to(data.workspaceId)
-      .emit("rename-file", data);
+    socket.on("rename-file", (data) => {
+      socket
+        .to(data.workspaceId)
+        .emit("rename-file", data);
     });
 
-  socket.on("delete-file", (data) => {
-    socket
-      .to(data.workspaceId)
-      .emit("delete-file", data);
+    socket.on("delete-file", (data) => {
+      socket
+        .to(data.workspaceId)
+        .emit("delete-file", data);
     });
 
+    // Test Messages
     socket.on(
       "message",
       ({ workspaceId, message }) => {
@@ -124,10 +133,13 @@ export function initializeSocket(server) {
       }
     );
 
-
+    // Disconnect
     socket.on("disconnect", () => {
       const workspaceId =
         socket.workspaceId;
+
+      const username =
+        socket.username;
 
       if (workspaceId) {
         workspaceUsers[workspaceId] =
@@ -149,6 +161,11 @@ export function initializeSocket(server) {
             workspaceUsers[workspaceId]
           );
         }
+
+        socket.to(workspaceId).emit(
+          "user-left",
+          username
+        );
       }
 
       console.log(
