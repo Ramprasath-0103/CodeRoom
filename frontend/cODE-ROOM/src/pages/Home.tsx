@@ -1,18 +1,21 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from "../api";
 
 function Home() {
   const navigate = useNavigate();
 
   const [workspaceId, setWorkspaceId] = useState("");
 
-  function generateWorkspaceId() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-  }
+  async function createWorkspace() {
+    try {
+      const response = await api.post("/workspace");
 
-  function createWorkspace() {
-    const id = generateWorkspaceId();
-    navigate(`/workspace/${id}`);
+      navigate(`/workspace/${response.data.workspaceId}`);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to create workspace");
+    }
   }
 
   function joinWorkspace() {

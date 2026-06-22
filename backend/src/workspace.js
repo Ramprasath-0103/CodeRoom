@@ -1,5 +1,6 @@
 import express from "express";
-import { workspaces } from "./store.js";
+import crypto from "crypto";
+import prisma from "./prisma.js";
 
 const router = express.Router();
 
@@ -10,35 +11,63 @@ function generateWorkspaceId() {
     .toUpperCase();
 }
 
-router.post("/", (req, res) => {
-  const workspaceId = generateWorkspaceId();
+router.post("/", async (req, res) => {
+  try {
+    const workspaceId = generateWorkspaceId();
 
-  workspaces.set(workspaceId, {
-    id: workspaceId,
-    files: [
-      {
-        id: 1,
-        name: "main.js",
-        content: "",
+    await prisma.workspace.create({
+      data: {
+        id: workspaceId,
+        files: {
+          create: [
+            {
+              id: crypto.randomUUID(),
+              name: "main.js",
+              content: "",
+            },
+          ],
+        },
       },
-    ],
-  });
+    });
 
-  res.status(201).json({
-    workspaceId,
-  });
-});
+    res.status(201).json({
+      workspaceId,
+    });
+  } catch (error) {
+    console.error(error);
 
-router.get("/:id", (req, res) => {
-  const workspace = workspaces.get(req.params.id);
-
-  if (!workspace) {
-    return res.status(404).json({
-      message: "Workspace not found",
+    res.status(500).json({
+      message: "Failed to create workspace",
     });
   }
+});
 
-  res.json(workspace);
+router.get("/:id", async (req, res) => {
+  try {
+    const workspace =
+      await prisma.workspace.findUnique({
+        where: {
+          id: req.params.id,
+        },
+        include: {
+          files: true,
+        },
+      });
+
+    if (!workspace) {
+      return res.status(404).json({
+        message: "Workspace not found",
+      });
+    }
+
+    res.json(workspace);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to load workspace",
+    });
+  }
 });
 
 

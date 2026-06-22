@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import CodeEditor from "../components/CodeEditor";
 import FileExplorer from "../components/FileExplorer";
 import { socket } from "../socket";
+import { api } from "../api";
 
 function Workspace() {
   const { workspaceId } = useParams();
@@ -26,21 +27,7 @@ function Workspace() {
     {},
   );
 
-  const [files, setFiles] = useState(() => {
-    const saved = localStorage.getItem(`workspace-${workspaceId}`);
-
-    if (saved) {
-      return JSON.parse(saved);
-    }
-
-    return [
-      {
-        id: 1,
-        name: "main.cpp",
-        content: "",
-      },
-    ];
-  });
+  const [files, setFiles] = useState<any[]>([]);
 
   const [activeFileId, setActiveFileId] = useState(1);
 
@@ -100,6 +87,28 @@ function Workspace() {
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    async function loadWorkspace() {
+      try {
+        const response = await api.get(`/workspace/${workspaceId}`);
+
+        setFiles(response.data.files);
+
+        if (response.data.files.length > 0) {
+          setActiveFileId(response.data.files[0].id);
+        }
+
+        console.log("Workspace loaded", response.data);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    if (workspaceId) {
+      loadWorkspace();
+    }
+  }, [workspaceId]);
 
   // Cursor Sharing
   useEffect(() => {
@@ -206,6 +215,29 @@ function Workspace() {
   }, []);
 
   useEffect(() => {
+    async function loadWorkspace() {
+      try {
+        const response = await api.get(`/workspace/${workspaceId}`);
+
+        console.log("DATABASE RESPONSE");
+        console.log(response.data);
+
+        setFiles(response.data.files);
+
+        if (response.data.files.length > 0) {
+          setActiveFileId(response.data.files[0].id);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    if (workspaceId) {
+      loadWorkspace();
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
     socket.on("message", (msg) => {
       console.log("Received:", msg);
     });
@@ -215,9 +247,9 @@ function Workspace() {
     };
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem(`workspace-${workspaceId}`, JSON.stringify(files));
-  }, [files, workspaceId]);
+  // useEffect(() => {
+  //   localStorage.setItem(`workspace-${workspaceId}`, JSON.stringify(files));
+  // }, [files, workspaceId]);
 
   const activeFile = files.find((file) => file.id === activeFileId);
 

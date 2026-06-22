@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { executeCode } from "../api";
+import { executeCode } from "../pistonApi";
 
 export default function Output({ editorRef, language }) {
   const [output, setOutput] = useState("");
