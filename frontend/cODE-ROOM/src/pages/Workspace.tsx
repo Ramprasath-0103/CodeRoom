@@ -411,6 +411,7 @@ function Workspace() {
             activeFileId={activeFileId}
             language={language}
             onLanguageChange={handleLanguageChange}
+            cursorPositions={cursorPositions}
           />
         </div>
       </div>

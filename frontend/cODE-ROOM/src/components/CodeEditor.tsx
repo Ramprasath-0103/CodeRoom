@@ -1,6 +1,6 @@
 import Editor from "@monaco-editor/react";
 import LanguageSelector from "./LanguageSelector";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { CODE_SNIPPETS } from "../constants";
 import Output from "./Output";
 import { socket } from "../socket";
@@ -13,6 +13,8 @@ interface CodeEditorProps {
   activeFileId: number;
   language: string;
   onLanguageChange: (lang: string) => void;
+
+  cursorPositions: Record<string, any>;
 }
 
 function CodeEditor({
@@ -23,8 +25,10 @@ function CodeEditor({
   activeFileId,
   language,
   onLanguageChange,
+  cursorPositions,
 }: CodeEditorProps) {
   const editorRef = useRef<any>(null);
+  const monacoRef = useRef<any>(null);
 
   const activeFileIdRef = useRef(activeFileId);
 
@@ -40,19 +44,14 @@ function CodeEditor({
     }
   }
 
-  function onMount(editor: any) {
+  function onMount(editor: any, monaco: any) {
     editorRef.current = editor;
+    monacoRef.current = monaco;
+
     editor.focus();
 
     editor.onDidChangeCursorPosition((e: any) => {
       const currentFileId = activeFileIdRef.current;
-
-      console.log(
-        "CURSOR EMIT",
-        currentFileId,
-        e.position.lineNumber,
-        e.position.column,
-      );
 
       socket.emit("cursor-move", {
         workspaceId,
@@ -65,6 +64,40 @@ function CodeEditor({
       });
     });
   }
+
+  useEffect(() => {
+    if (!editorRef.current || !monacoRef.current) {
+      return;
+    }
+
+    const decorations: any[] = [];
+
+    Object.entries(cursorPositions)
+      .filter(
+        ([user, data]: any) =>
+          user !== username && data.fileId === activeFileId,
+      )
+      .forEach(([user, data]: any) => {
+        decorations.push({
+          range: new monacoRef.current.Range(
+            data.line,
+            data.column,
+            data.line,
+            data.column,
+          ),
+
+          options: {
+            className: "remote-cursor",
+
+            hoverMessage: {
+              value: user,
+            },
+          },
+        });
+      });
+
+    editorRef.current.deltaDecorations([], decorations);
+  }, [cursorPositions, activeFileId, username]);
 
   return (
     <div
