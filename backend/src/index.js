@@ -3,7 +3,9 @@ import cors from "cors";
 import workspaceRouter from "./workspace.js";
 import http from "http";
 import { initializeSocket } from "./socket.js";
+import fileRouter from "./routes/file.js";
 
+app.use("/workspace", fileRouter);
 const app = express();
 
 app.use(cors());

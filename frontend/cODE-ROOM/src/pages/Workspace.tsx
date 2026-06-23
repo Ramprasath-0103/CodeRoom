@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import CodeEditor from "../components/CodeEditor";
 import FileExplorer from "../components/FileExplorer";
 import { socket } from "../socket";
-import { api } from "../api";
+import { api, createFile } from "../api";
 
 function Workspace() {
   const { workspaceId } = useParams();
@@ -324,25 +324,25 @@ function Workspace() {
     });
   }
 
-  function addFile() {
+  async function addFile() {
     const fileName = prompt("Enter file name");
 
     if (!fileName) return;
 
-    const newFile = {
-      id: Date.now(),
-      name: fileName,
-      content: "",
-    };
+    try {
+      const newFile = await createFile(workspaceId!, fileName);
 
-    setFiles((prev) => [...prev, newFile]);
+      setFiles((prev) => [...prev, newFile]);
 
-    socket.emit("create-file", {
-      workspaceId,
-      file: newFile,
-    });
+      socket.emit("create-file", {
+        workspaceId,
+        file: newFile,
+      });
 
-    setActiveFileId(newFile.id);
+      setActiveFileId(newFile.id);
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   function deleteFile(fileId: number) {
