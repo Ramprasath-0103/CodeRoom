@@ -1,16 +1,16 @@
 interface FileType {
-  id: number;
+  id: string;
   name: string;
   content: string;
 }
 
 interface FileExplorerProps {
   files: FileType[];
-  activeFileId: number;
-  setActiveFileId: (id: number) => void;
+  activeFileId: string;
+  setActiveFileId: (id: string) => void;
   addFile: () => void;
-  renameFile: (id: number) => void;
-  deleteFile: (id: number) => void;
+  renameFile: (id: string) => void;
+  deleteFile: (id: string) => void;
 }
 
 function FileExplorer({

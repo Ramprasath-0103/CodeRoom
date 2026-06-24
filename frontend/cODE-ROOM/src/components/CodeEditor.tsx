@@ -10,7 +10,7 @@ interface CodeEditorProps {
   onChange: (value: string) => void;
   workspaceId: string;
   username: string;
-  activeFileId: number;
+  activeFileId: string;
   language: string;
   onLanguageChange: (lang: string) => void;
 

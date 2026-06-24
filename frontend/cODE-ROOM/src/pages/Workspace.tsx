@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import CodeEditor from "../components/CodeEditor";
 import FileExplorer from "../components/FileExplorer";
 import { socket } from "../socket";
-import { api, createFile } from "../api";
+import { api, createFile, renameFileApi } from "../api";
 
 function Workspace() {
   const { workspaceId } = useParams();
@@ -29,7 +29,7 @@ function Workspace() {
 
   const [files, setFiles] = useState<any[]>([]);
 
-  const [activeFileId, setActiveFileId] = useState(1);
+  const [activeFileId, setActiveFileId] = useState<string>("");
 
   useEffect(() => {
     socket.on("user-joined", (username) => {
@@ -301,27 +301,35 @@ function Workspace() {
     });
   }
 
-  function renameFile(fileId: number) {
+  async function renameFile(fileId: string) {
     const newName = prompt("Enter new file name");
 
     if (!newName) return;
 
-    setFiles((prev) =>
-      prev.map((file) =>
-        file.id === fileId
-          ? {
-              ...file,
-              name: newName,
-            }
-          : file,
-      ),
-    );
+    try {
+      console.log("Sending rename request");
+      
+      await renameFileApi(fileId, newName);
 
-    socket.emit("rename-file", {
-      workspaceId,
-      fileId,
-      newName,
-    });
+      setFiles((prev) =>
+        prev.map((file) =>
+          file.id === fileId
+            ? {
+                ...file,
+                name: newName,
+              }
+            : file,
+        ),
+      );
+
+      socket.emit("rename-file", {
+        workspaceId,
+        fileId,
+        newName,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   async function addFile() {
@@ -345,7 +353,7 @@ function Workspace() {
     }
   }
 
-  function deleteFile(fileId: number) {
+  function deleteFile(fileId: string) {
     const remainingFiles = files.filter((file) => file.id !== fileId);
 
     setFiles(remainingFiles);
