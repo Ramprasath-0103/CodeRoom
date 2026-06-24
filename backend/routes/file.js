@@ -22,6 +22,28 @@ router.post("/:workspaceId/file", async (req, res) => {
   res.status(201).json(file);
 });
 
+router.patch("/:id/content", async (req, res) => {
+  const { content } = req.body;
+
+  try {
+    const file = await prisma.file.update({
+      where: {
+        id: req.params.id,
+      },
+      data: {
+        content,
+      },
+    });
+
+    res.json(file);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to update content",
+    });
+  }
+});
 
 router.patch("/file/:fileId", async (req, res) => {
   const { fileId } = req.params;

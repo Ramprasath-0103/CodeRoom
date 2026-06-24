@@ -18,6 +18,20 @@ export async function createFile(
   return response.data;
 }
 
+export async function updateFileContentApi(
+  fileId: string,
+  content: string,
+) {
+  const response = await api.patch(
+    `/workspace/${fileId}/content`,
+    {
+      content,
+    },
+  );
+
+  return response.data;
+}
+
 
 export async function renameFileApi(
   fileId: string,

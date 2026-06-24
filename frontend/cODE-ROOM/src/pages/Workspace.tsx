@@ -5,6 +5,7 @@ import FileExplorer from "../components/FileExplorer";
 import { socket } from "../socket";
 import { api, createFile, renameFileApi } from "../api";
 import { deleteFileApi } from "../api";
+import { updateFileContentApi } from "../api";
 
 function Workspace() {
   const { workspaceId } = useParams();
@@ -20,6 +21,7 @@ function Workspace() {
 
   const isRemoteUpdate = useRef(false);
   const typingTimeout = useRef<any>(null);
+  const saveTimeout = useRef<any>(null);
 
   const [typingUsers, setTypingUsers] = useState<Record<string, any>>({});
   const [users, setUsers] = useState<any[]>([]);
@@ -254,7 +256,7 @@ function Workspace() {
 
   const activeFile = files.find((file) => file.id === activeFileId);
 
-  function handleEditorChange(value: string) {
+  async function handleEditorChange(value: string) {
     if (isRemoteUpdate.current) {
       isRemoteUpdate.current = false;
       return;
@@ -285,6 +287,12 @@ function Workspace() {
           : file,
       ),
     );
+
+    try {
+      await updateFileContentApi(activeFileId, value);
+    } catch (error) {
+      console.error("Failed to save content:", error);
+    }
 
     socket.emit("file-change", {
       workspaceId,
