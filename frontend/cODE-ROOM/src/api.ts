@@ -32,3 +32,11 @@ export async function renameFileApi(
 
   return response.data;
 }
+
+
+export async function deleteFileApi(fileId: string) {
+  const response = await api.delete(`/workspace/${fileId}`);
+
+  return response.data;
+}
+

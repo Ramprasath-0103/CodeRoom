@@ -4,6 +4,7 @@ import CodeEditor from "../components/CodeEditor";
 import FileExplorer from "../components/FileExplorer";
 import { socket } from "../socket";
 import { api, createFile, renameFileApi } from "../api";
+import { deleteFileApi } from "../api";
 
 function Workspace() {
   const { workspaceId } = useParams();
@@ -308,7 +309,7 @@ function Workspace() {
 
     try {
       console.log("Sending rename request");
-      
+
       await renameFileApi(fileId, newName);
 
       setFiles((prev) =>
@@ -353,18 +354,24 @@ function Workspace() {
     }
   }
 
-  function deleteFile(fileId: string) {
-    const remainingFiles = files.filter((file) => file.id !== fileId);
+  async function deleteFile(fileId: string) {
+    try {
+      await deleteFileApi(fileId);
 
-    setFiles(remainingFiles);
+      const remainingFiles = files.filter((file) => file.id !== fileId);
 
-    socket.emit("delete-file", {
-      workspaceId,
-      fileId,
-    });
+      setFiles(remainingFiles);
 
-    if (activeFileId === fileId && remainingFiles.length > 0) {
-      setActiveFileId(remainingFiles[0].id);
+      socket.emit("delete-file", {
+        workspaceId,
+        fileId,
+      });
+
+      if (activeFileId === fileId && remainingFiles.length > 0) {
+        setActiveFileId(remainingFiles[0].id);
+      }
+    } catch (error) {
+      console.error(error);
     }
   }
 

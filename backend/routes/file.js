@@ -39,4 +39,26 @@ router.patch("/file/:fileId", async (req, res) => {
   res.json(updatedFile);
 });
 
+router.delete("/:id", async (req, res) => {
+  try {
+    await prisma.file.delete({
+      where: {
+        id: req.params.id,
+      },
+    });
+
+    res.json({
+      success: true,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to delete file",
+    });
+  }
+});
+
+
+
 export default router;
