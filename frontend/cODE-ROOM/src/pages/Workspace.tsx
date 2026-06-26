@@ -288,11 +288,17 @@ function Workspace() {
       ),
     );
 
-    try {
-      await updateFileContentApi(activeFileId, value);
-    } catch (error) {
-      console.error("Failed to save content:", error);
-    }
+    clearTimeout(saveTimeout.current);
+
+    saveTimeout.current = setTimeout(async () => {
+      try {
+        await updateFileContentApi(activeFileId, value);
+
+        console.log("Database saved:", activeFileId);
+      } catch (error) {
+        console.error("Failed to save content:", error);
+      }
+    }, 1000);
 
     socket.emit("file-change", {
       workspaceId,
