@@ -34,6 +34,25 @@ function Workspace() {
 
   const [activeFileId, setActiveFileId] = useState<string>("");
 
+  const [loading, setLoading] = useState(true);
+
+  async function loadWorkspace() {
+    try {
+      const response = await api.get(`/workspace/${workspaceId}`);
+
+      setFiles(response.data.files);
+
+      if (response.data.files.length > 0) {
+        setActiveFileId(response.data.files[0].id);
+      }
+    } finally {
+      setLoading(false);
+    }
+    if (loading) {
+      return <h2>Loading workspace...</h2>;
+    }
+  }
+
   useEffect(() => {
     socket.on("user-joined", (username) => {
       setNotifications((prev) => [`${username} joined`, ...prev]);
@@ -216,29 +235,6 @@ function Workspace() {
       socket.off("delete-file");
     };
   }, []);
-
-  useEffect(() => {
-    async function loadWorkspace() {
-      try {
-        const response = await api.get(`/workspace/${workspaceId}`);
-
-        console.log("DATABASE RESPONSE");
-        console.log(response.data);
-
-        setFiles(response.data.files);
-
-        if (response.data.files.length > 0) {
-          setActiveFileId(response.data.files[0].id);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    }
-
-    if (workspaceId) {
-      loadWorkspace();
-    }
-  }, [workspaceId]);
 
   useEffect(() => {
     socket.on("message", (msg) => {
