@@ -15,9 +15,10 @@ model Workspace {
 }
 
 model File {
-  id      String @id
-  name    String
-  content String
+  id       String @id
+  name     String
+  content  String
+  language String @default("javascript")
 
   workspaceId String
 

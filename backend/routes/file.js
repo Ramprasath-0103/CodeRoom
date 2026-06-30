@@ -12,11 +12,12 @@ router.post("/:workspaceId/file", async (req, res) => {
 
   const file = await prisma.file.create({
     data: {
-      id: crypto.randomUUID(),
-      name,
-      content: "",
-      workspaceId,
-    },
+    id: crypto.randomUUID(),
+    name,
+    content: "",
+    language: "javascript",
+    workspaceId,
+},
   });
 
   res.status(201).json(file);
@@ -59,6 +60,29 @@ router.patch("/file/:fileId", async (req, res) => {
   });
 
   res.json(updatedFile);
+});
+
+router.patch("/:id/language", async (req, res) => {
+  const { language } = req.body;
+
+  try {
+    const file = await prisma.file.update({
+      where: {
+        id: req.params.id,
+      },
+      data: {
+        language,
+      },
+    });
+
+    res.json(file);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to update language",
+    });
+  }
 });
 
 router.delete("/:id", async (req, res) => {

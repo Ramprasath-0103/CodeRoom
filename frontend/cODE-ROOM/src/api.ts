@@ -32,6 +32,19 @@ export async function updateFileContentApi(
   return response.data;
 }
 
+export async function updateFileLanguageApi(
+  fileId: string,
+  language: string,
+) {
+  const response = await api.patch(
+    `/workspace/${fileId}/language`,
+    {
+      language,
+    },
+  );
+
+  return response.data;
+}
 
 export async function renameFileApi(
   fileId: string,

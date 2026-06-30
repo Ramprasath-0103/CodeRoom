@@ -24,6 +24,7 @@ router.post("/", async (req, res) => {
               id: crypto.randomUUID(),
               name: "main.js",
               content: "",
+              language: "javascript",
             },
           ],
         },

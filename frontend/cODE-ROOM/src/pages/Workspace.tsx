@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import CodeEditor from "../components/CodeEditor";
 import FileExplorer from "../components/FileExplorer";
 import { socket } from "../socket";
-import { api, createFile, renameFileApi } from "../api";
+import { api, createFile, renameFileApi, updateFileLanguageApi } from "../api";
 import { deleteFileApi } from "../api";
 import { updateFileContentApi } from "../api";
 
@@ -14,8 +14,6 @@ function Workspace() {
     localStorage.getItem("username") ||
       `User-${Math.floor(Math.random() * 1000)}`,
   ).current;
-
-  const [language, setLanguage] = useState("javascript");
 
   const [notifications, setNotifications] = useState<string[]>([]);
 
@@ -34,6 +32,7 @@ function Workspace() {
     id: string;
     name: string;
     content: string;
+    language: string;
   }
 
   const [files, setFiles] = useState<File[]>([]);
@@ -194,9 +193,17 @@ function Workspace() {
   }, []);
 
   useEffect(() => {
-    socket.on("language-change", ({ language }) => {
-      console.log("LANGUAGE RECEIVED", language);
-      setLanguage(language);
+    socket.on("language-change", ({ fileId, language }) => {
+      setFiles((prev) =>
+        prev.map((file) =>
+          file.id === fileId
+            ? {
+                ...file,
+                language,
+              }
+            : file,
+        ),
+      );
     });
 
     return () => {
@@ -304,11 +311,27 @@ function Workspace() {
     });
   }
 
-  function handleLanguageChange(language: string) {
-    setLanguage(language);
+  async function handleLanguageChange(language: string) {
+    setFiles((prev) =>
+      prev.map((file) =>
+        file.id === activeFileId
+          ? {
+              ...file,
+              language,
+            }
+          : file,
+      ),
+    );
+
+    try {
+      await updateFileLanguageApi(activeFileId, language);
+    } catch (error) {
+      console.error(error);
+    }
 
     socket.emit("language-change", {
       workspaceId,
+      fileId: activeFileId,
       language,
     });
   }
@@ -486,7 +509,7 @@ function Workspace() {
             workspaceId={workspaceId || ""}
             username={username}
             activeFileId={activeFileId}
-            language={language}
+            language={activeFile?.language ?? "javascript"}
             onLanguageChange={handleLanguageChange}
             cursorPositions={cursorPositions}
           />
