@@ -30,28 +30,19 @@ function Workspace() {
     {},
   );
 
-  const [files, setFiles] = useState<any[]>([]);
+  interface File {
+    id: string;
+    name: string;
+    content: string;
+  }
+
+  const [files, setFiles] = useState<File[]>([]);
 
   const [activeFileId, setActiveFileId] = useState<string>("");
 
   const [loading, setLoading] = useState(true);
 
-  async function loadWorkspace() {
-    try {
-      const response = await api.get(`/workspace/${workspaceId}`);
-
-      setFiles(response.data.files);
-
-      if (response.data.files.length > 0) {
-        setActiveFileId(response.data.files[0].id);
-      }
-    } finally {
-      setLoading(false);
-    }
-    if (loading) {
-      return <h2>Loading workspace...</h2>;
-    }
-  }
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     socket.on("user-joined", (username) => {
@@ -122,8 +113,14 @@ function Workspace() {
         }
 
         console.log("Workspace loaded", response.data);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.response?.status === 404) {
+          setNotFound(true);
+        }
+
         console.error(error);
+      } finally {
+        setLoading(false);
       }
     }
 
@@ -291,8 +288,12 @@ function Workspace() {
         await updateFileContentApi(activeFileId, value);
 
         console.log("Database saved:", activeFileId);
-      } catch (error) {
-        console.error("Failed to save content:", error);
+      } catch (error: any) {
+        if (error.response?.status === 404) {
+          setNotFound(true);
+        }
+
+        console.error(error);
       }
     }, 1000);
 
@@ -338,7 +339,11 @@ function Workspace() {
         fileId,
         newName,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        setNotFound(true);
+      }
+
       console.error(error);
     }
   }
@@ -359,7 +364,11 @@ function Workspace() {
       });
 
       setActiveFileId(newFile.id);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        setNotFound(true);
+      }
+
       console.error(error);
     }
   }
@@ -377,10 +386,13 @@ function Workspace() {
         fileId,
       });
 
-      if (activeFileId === fileId && remainingFiles.length > 0) {
-        setActiveFileId(remainingFiles[0].id);
+      if (remainingFiles.length > 0) setActiveFileId(remainingFiles[0].id);
+      else setActiveFileId("");
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        setNotFound(true);
       }
-    } catch (error) {
+
       console.error(error);
     }
   }
@@ -390,6 +402,14 @@ function Workspace() {
       workspaceId,
       message: "hello",
     });
+  }
+
+  if (loading) {
+    return <h2>Loading workspace...</h2>;
+  }
+
+  if (notFound) {
+    return <h2>Workspace not found.</h2>;
   }
 
   return (
