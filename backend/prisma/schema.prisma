@@ -10,15 +10,14 @@ datasource db {
 model Workspace {
   id        String   @id
   createdAt DateTime @default(now())
-
-  files File[]
+  files     File[]
 }
 
 model File {
-  id       String @id
-  name     String
-  content  String
-  language String @default("javascript")
+  id          String @id
+  name        String
+  content     String
+  language    String @default("javascript")
 
   workspaceId String
 
