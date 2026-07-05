@@ -63,6 +63,12 @@ function Workspace() {
   }, [username]);
 
   useEffect(() => {
+    if (workspaceId) {
+      localStorage.setItem("last-workspace", workspaceId);
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
     if (!workspaceId) return;
 
     socket.emit("join-workspace", {
@@ -70,6 +76,12 @@ function Workspace() {
       username,
     });
   }, [workspaceId, username]);
+
+  useEffect(() => {
+    if (!workspaceId || !activeFileId) return;
+
+    localStorage.setItem(`active-file-${workspaceId}`, activeFileId);
+  }, [workspaceId, activeFileId]);
 
   // Users
   useEffect(() => {
@@ -107,11 +119,19 @@ function Workspace() {
 
         setFiles(response.data.files);
 
-        if (response.data.files.length > 0) {
+        const savedActiveFile = localStorage.getItem(
+          `active-file-${workspaceId}`,
+        );
+
+        const fileExists = response.data.files.some(
+          (file: any) => file.id === savedActiveFile,
+        );
+
+        if (fileExists) {
+          setActiveFileId(savedActiveFile!);
+        } else if (response.data.files.length > 0) {
           setActiveFileId(response.data.files[0].id);
         }
-
-        console.log("Workspace loaded", response.data);
       } catch (error: any) {
         if (error.response?.status === 404) {
           setNotFound(true);

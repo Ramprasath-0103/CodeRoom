@@ -5,6 +5,8 @@ import { api } from "../api";
 function Home() {
   const navigate = useNavigate();
 
+  const lastWorkspace = localStorage.getItem("last-workspace");
+
   const [workspaceId, setWorkspaceId] = useState("");
 
   async function createWorkspace() {
@@ -33,6 +35,18 @@ function Home() {
       <h1>CodeCollab</h1>
 
       <button onClick={createWorkspace}>Create Workspace</button>
+
+      {lastWorkspace && (
+        <>
+          <hr />
+
+          <h3>Continue Last Workspace</h3>
+
+          <button onClick={() => navigate(`/workspace/${lastWorkspace}`)}>
+            {lastWorkspace}
+          </button>
+        </>
+      )}
 
       <hr />
 
