@@ -6,8 +6,11 @@ import Output from "./Output";
 import { socket } from "../socket";
 import { getYText } from "../yjs";
 import { bindMonacoToYText } from "../yjsBinding";
+import type { HocuspocusProvider } from "@hocuspocus/provider";
+import "../awareness.css";
 
 interface CodeEditorProps {
+  providerRef: React.RefObject<HocuspocusProvider | null>;
   workspaceId: string;
   username: string;
   activeFileId: string;
@@ -18,6 +21,7 @@ interface CodeEditorProps {
 }
 
 function CodeEditor({
+  providerRef,
   workspaceId,
   username,
   activeFileId,
@@ -31,6 +35,7 @@ function CodeEditor({
   const activeFileIdRef = useRef(activeFileId);
   const unbindYTextRef = useRef<(() => void) | null>(null);
   const typingTimeoutRef = useRef<any>(null);
+  const decorationIdsRef = useRef<string[]>([]);
 
   useEffect(() => {
     activeFileIdRef.current = activeFileId;
@@ -77,17 +82,28 @@ function CodeEditor({
     });
 
     editor.onDidChangeCursorPosition((e: any) => {
-      const currentFileId = activeFileIdRef.current;
-
-      socket.emit("cursor-move", {
-        workspaceId,
-        username,
-        fileId: currentFileId,
-        position: {
-          line: e.position.lineNumber,
-          column: e.position.column,
-        },
+      providerRef.current?.awareness?.setLocalStateField("cursor", {
+        fileId: activeFileIdRef.current,
+        line: e.position.lineNumber,
+        column: e.position.column,
       });
+    });
+
+    editor.onDidChangeCursorSelection((e: any) => {
+      const sel = e.selection;
+
+      providerRef.current?.awareness?.setLocalStateField(
+        "selection",
+        sel.isEmpty()
+          ? null
+          : {
+              fileId: activeFileIdRef.current,
+              startLine: sel.startLineNumber,
+              startColumn: sel.startColumn,
+              endLine: sel.endLineNumber,
+              endColumn: sel.endColumn,
+            },
+      );
     });
   }
 
@@ -104,6 +120,8 @@ function CodeEditor({
           user !== username && data.fileId === activeFileId,
       )
       .forEach(([user, data]: any) => {
+        if (data.line == null || data.column == null) return;
+
         decorations.push({
           range: new monacoRef.current.Range(
             data.line,
@@ -113,16 +131,34 @@ function CodeEditor({
           ),
 
           options: {
-            className: "remote-cursor",
+            className: `remote-cursor-${data.colorIndex ?? 0}`,
 
             hoverMessage: {
               value: user,
             },
           },
         });
+
+        if (data.selection) {
+          decorations.push({
+            range: new monacoRef.current.Range(
+              data.selection.startLine,
+              data.selection.startColumn,
+              data.selection.endLine,
+              data.selection.endColumn,
+            ),
+
+            options: {
+              className: `remote-selection-${data.colorIndex ?? 0}`,
+            },
+          });
+        }
       });
 
-    editorRef.current.deltaDecorations([], decorations);
+    decorationIdsRef.current = editorRef.current.deltaDecorations(
+      decorationIdsRef.current,
+      decorations,
+    );
   }, [cursorPositions, activeFileId, username]);
 
   return (

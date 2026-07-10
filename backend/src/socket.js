@@ -39,26 +39,6 @@ export function initializeSocket(server) {
   }
 );
 
-    // Cursor Sharing
-    socket.on(
-      "cursor-move",
-      ({
-        workspaceId,
-        username,
-        fileId,
-        position,
-      }) => {
-        socket.to(workspaceId).emit(
-          "cursor-move",
-          {
-            username,
-            fileId,
-            position,
-          }
-        );
-      }
-    );
-
     // Join Workspace
     socket.on(
       "join-workspace",

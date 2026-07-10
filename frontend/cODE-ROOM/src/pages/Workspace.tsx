@@ -6,9 +6,12 @@ import { socket } from "../socket";
 import { api, createFile, renameFileApi, updateFileLanguageApi } from "../api";
 import { deleteFileApi } from "../api";
 import { connectYjsProvider } from "../hocuspocus";
+import { colorIndexForUser } from "../awarenessColor";
+import type { HocuspocusProvider } from "@hocuspocus/provider";
 
 function Workspace() {
   const { workspaceId } = useParams();
+  const providerRef = useRef<HocuspocusProvider | null>(null);
   const username = useRef(
     localStorage.getItem("username") ||
       `User-${Math.floor(Math.random() * 1000)}`,
@@ -71,7 +74,42 @@ function Workspace() {
       username,
     });
 
-    return connectYjsProvider(workspaceId);
+    const provider = connectYjsProvider(workspaceId);
+    providerRef.current = provider;
+
+    const awareness = provider.awareness;
+
+    awareness?.setLocalStateField("user", {
+      name: username,
+      colorIndex: colorIndexForUser(username),
+    });
+
+    function updateCursors() {
+      const next: Record<string, any> = {};
+
+      awareness?.getStates().forEach((state: any, clientId: number) => {
+        if (clientId === awareness.clientID) return;
+        if (!state.user?.name) return;
+
+        next[state.user.name] = {
+          fileId: state.cursor?.fileId,
+          line: state.cursor?.line,
+          column: state.cursor?.column,
+          colorIndex: state.user.colorIndex,
+          selection: state.selection,
+        };
+      });
+
+      setCursorPositions(next);
+    }
+
+    awareness?.on("change", updateCursors);
+
+    return () => {
+      awareness?.off("change", updateCursors);
+      provider.destroy();
+      providerRef.current = null;
+    };
   }, [workspaceId, username]);
 
   useEffect(() => {
@@ -89,24 +127,6 @@ function Workspace() {
     return () => {
       socket.off("users-update");
     };
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCursorPositions((prev) => {
-        const updated = { ...prev };
-
-        Object.keys(updated).forEach((username) => {
-          if (Date.now() - updated[username].timestamp > 10000) {
-            delete updated[username];
-          }
-        });
-
-        return updated;
-      });
-    }, 5000);
-
-    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -144,25 +164,6 @@ function Workspace() {
       loadWorkspace();
     }
   }, [workspaceId]);
-
-  // Cursor Sharing
-  useEffect(() => {
-    socket.on("cursor-move", ({ username, fileId, position }) => {
-      setCursorPositions((prev) => ({
-        ...prev,
-        [username]: {
-          fileId,
-          line: position.line,
-          column: position.column,
-          timestamp: Date.now(),
-        },
-      }));
-    });
-
-    return () => {
-      socket.off("cursor-move");
-    };
-  }, []);
 
   // Typing
   useEffect(() => {
@@ -395,7 +396,7 @@ function Workspace() {
             }}
           >
             🟢 {user.username}
-            {cursorPositions[user.username] && (
+            {cursorPositions[user.username]?.line != null && (
               <>
                 {" "}
                 [
@@ -449,6 +450,7 @@ function Workspace() {
 
         <div style={{ flex: 1 }}>
           <CodeEditor
+            providerRef={providerRef}
             workspaceId={workspaceId || ""}
             username={username}
             activeFileId={activeFileId}
