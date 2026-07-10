@@ -7,6 +7,7 @@ import { api, createFile, renameFileApi, updateFileLanguageApi } from "../api";
 import { deleteFileApi } from "../api";
 import { updateFileContentApi } from "../api";
 import { getYText } from "../yjs";
+import { connectYjsProvider } from "../hocuspocus";
 import * as Y from "yjs";
 
 function Workspace() {
@@ -83,6 +84,8 @@ function Workspace() {
       workspaceId,
       username,
     });
+
+    return connectYjsProvider(workspaceId);
   }, [workspaceId, username]);
 
   useEffect(() => {

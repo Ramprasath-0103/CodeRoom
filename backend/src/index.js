@@ -4,6 +4,7 @@ import workspaceRouter from "./workspace.js";
 import http from "http";
 import { initializeSocket } from "./socket.js";
 import fileRouter from "../routes/file.js";
+import { hocuspocusServer } from "./hocuspocus.js";
 
 const app = express();
 
@@ -30,3 +31,5 @@ initializeSocket(server);
 server.listen(PORT, () => {
   console.log(`Server running on ${PORT}`);
 });
+
+hocuspocusServer.listen();
