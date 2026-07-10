@@ -4,6 +4,8 @@ import { useRef, useEffect } from "react";
 import { CODE_SNIPPETS } from "../constants";
 import Output from "./Output";
 import { socket } from "../socket";
+import { getYText } from "../yjs";
+import { bindMonacoToYText } from "../yjsBinding";
 
 interface CodeEditorProps {
   value: string;
@@ -31,10 +33,17 @@ function CodeEditor({
   const monacoRef = useRef<any>(null);
 
   const activeFileIdRef = useRef(activeFileId);
+  const unbindYTextRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     activeFileIdRef.current = activeFileId;
   }, [activeFileId]);
+
+  useEffect(() => {
+    return () => {
+      unbindYTextRef.current?.();
+    };
+  }, []);
 
   function onSelect(lang: string) {
     onLanguageChange(lang);
@@ -49,6 +58,9 @@ function CodeEditor({
     monacoRef.current = monaco;
 
     editor.focus();
+
+    const ytext = getYText(activeFileIdRef.current);
+    unbindYTextRef.current = bindMonacoToYText(editor, ytext);
 
     editor.onDidChangeCursorPosition((e: any) => {
       const currentFileId = activeFileIdRef.current;

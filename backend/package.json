@@ -8,13 +8,13 @@
     "start": "node src/index.js"
   },
   "dependencies": {
+    "@hocuspocus/server": "^4.3.0",
     "@prisma/client": "^6.19.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "prisma": "^6.19.3",
     "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3",
-    "y-websocket": "^3.0.0"
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

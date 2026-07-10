@@ -4,12 +4,15 @@ const ydoc = new Y.Doc();
 
 const textMap = new Map<string, Y.Text>();
 
-export function getYText(fileId: string) {
-  if (!textMap.has(fileId)) {
-    textMap.set(fileId, ydoc.getText(fileId));
+export function getYText(fileId: string): Y.Text {
+  let text = textMap.get(fileId);
+
+  if (!text) {
+    text = ydoc.getText(fileId);
+    textMap.set(fileId, text);
   }
 
-  return textMap.get(fileId)!;
+  return text;
 }
 
 export { ydoc };

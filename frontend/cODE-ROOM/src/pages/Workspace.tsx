@@ -6,10 +6,12 @@ import { socket } from "../socket";
 import { api, createFile, renameFileApi, updateFileLanguageApi } from "../api";
 import { deleteFileApi } from "../api";
 import { updateFileContentApi } from "../api";
+import { getYText } from "../yjs";
+import * as Y from "yjs";
 
 function Workspace() {
   const { workspaceId } = useParams();
-
+  const activeYTextRef = useRef<Y.Text | null>(null);
   const username = useRef(
     localStorage.getItem("username") ||
       `User-${Math.floor(Math.random() * 1000)}`,
@@ -61,6 +63,12 @@ function Workspace() {
   useEffect(() => {
     localStorage.setItem("username", username);
   }, [username]);
+
+  useEffect(() => {
+    if (!activeFileId) return;
+
+    activeYTextRef.current = getYText(activeFileId);
+  }, [activeFileId]);
 
   useEffect(() => {
     if (workspaceId) {
