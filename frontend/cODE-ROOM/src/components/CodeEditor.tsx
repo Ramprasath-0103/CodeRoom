@@ -8,8 +8,6 @@ import { getYText } from "../yjs";
 import { bindMonacoToYText } from "../yjsBinding";
 
 interface CodeEditorProps {
-  value: string;
-  onChange: (value: string) => void;
   workspaceId: string;
   username: string;
   activeFileId: string;
@@ -20,8 +18,6 @@ interface CodeEditorProps {
 }
 
 function CodeEditor({
-  value,
-  onChange,
   workspaceId,
   username,
   activeFileId,
@@ -34,6 +30,7 @@ function CodeEditor({
 
   const activeFileIdRef = useRef(activeFileId);
   const unbindYTextRef = useRef<(() => void) | null>(null);
+  const typingTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
     activeFileIdRef.current = activeFileId;
@@ -48,8 +45,10 @@ function CodeEditor({
   function onSelect(lang: string) {
     onLanguageChange(lang);
 
-    if (!value) {
-      onChange(CODE_SNIPPETS[lang] ?? "");
+    const ytext = getYText(activeFileIdRef.current);
+
+    if (ytext.length === 0) {
+      ytext.insert(0, CODE_SNIPPETS[lang] ?? "");
     }
   }
 
@@ -60,7 +59,22 @@ function CodeEditor({
     editor.focus();
 
     const ytext = getYText(activeFileIdRef.current);
-    unbindYTextRef.current = bindMonacoToYText(editor, ytext);
+    unbindYTextRef.current = bindMonacoToYText(editor, ytext, () => {
+      socket.emit("typing", {
+        workspaceId,
+        username,
+        fileId: activeFileIdRef.current,
+      });
+
+      clearTimeout(typingTimeoutRef.current);
+
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit("stop-typing", {
+          workspaceId,
+          username,
+        });
+      }, 1000);
+    });
 
     editor.onDidChangeCursorPosition((e: any) => {
       const currentFileId = activeFileIdRef.current;
@@ -132,10 +146,9 @@ function CodeEditor({
           key={activeFileId}
           height="90vh"
           language={language}
-          value={value}
+          defaultValue=""
           theme="vs-dark"
           onMount={onMount}
-          onChange={(val) => onChange(val ?? "")}
         />
       </div>
 

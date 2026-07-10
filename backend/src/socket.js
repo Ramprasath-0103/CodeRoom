@@ -99,13 +99,6 @@ export function initializeSocket(server) {
       }
     );
 
-    // File Content Sync
-    socket.on("file-change", (data) => {
-      socket
-        .to(data.workspaceId)
-        .emit("file-change", data);
-    });
-
     socket.on(
   "language-change",
   ({ workspaceId, language }) => {

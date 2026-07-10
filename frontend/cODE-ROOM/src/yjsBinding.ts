@@ -1,20 +1,24 @@
 import * as Y from "yjs";
 import { ydoc } from "./yjs";
 
-export function bindMonacoToYText(editor: any, ytext: Y.Text) {
+export function bindMonacoToYText(
+  editor: any,
+  ytext: Y.Text,
+  onLocalChange?: () => void,
+) {
   const model = editor.getModel();
   if (!model) return () => {};
 
-  if (ytext.length === 0 && model.getValue().length > 0) {
-    ytext.insert(0, model.getValue());
-  } else if (ytext.toString() !== model.getValue()) {
+  if (ytext.toString() !== model.getValue()) {
     model.setValue(ytext.toString());
   }
 
   let applyingRemote = false;
 
-  const onLocalChange = model.onDidChangeContent((event: any) => {
+  const onModelChange = model.onDidChangeContent((event: any) => {
     if (applyingRemote) return;
+
+    onLocalChange?.();
 
     ydoc.transact(() => {
       event.changes
@@ -38,7 +42,7 @@ export function bindMonacoToYText(editor: any, ytext: Y.Text) {
   ytext.observe(onRemoteChange);
 
   return () => {
-    onLocalChange.dispose();
+    onModelChange.dispose();
     ytext.unobserve(onRemoteChange);
   };
 }

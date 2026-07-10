@@ -5,24 +5,16 @@ import FileExplorer from "../components/FileExplorer";
 import { socket } from "../socket";
 import { api, createFile, renameFileApi, updateFileLanguageApi } from "../api";
 import { deleteFileApi } from "../api";
-import { updateFileContentApi } from "../api";
-import { getYText } from "../yjs";
 import { connectYjsProvider } from "../hocuspocus";
-import * as Y from "yjs";
 
 function Workspace() {
   const { workspaceId } = useParams();
-  const activeYTextRef = useRef<Y.Text | null>(null);
   const username = useRef(
     localStorage.getItem("username") ||
       `User-${Math.floor(Math.random() * 1000)}`,
   ).current;
 
   const [notifications, setNotifications] = useState<string[]>([]);
-
-  const isRemoteUpdate = useRef(false);
-  const typingTimeout = useRef<any>(null);
-  const saveTimeout = useRef<any>(null);
 
   const [typingUsers, setTypingUsers] = useState<Record<string, any>>({});
   const [users, setUsers] = useState<any[]>([]);
@@ -64,12 +56,6 @@ function Workspace() {
   useEffect(() => {
     localStorage.setItem("username", username);
   }, [username]);
-
-  useEffect(() => {
-    if (!activeFileId) return;
-
-    activeYTextRef.current = getYText(activeFileId);
-  }, [activeFileId]);
 
   useEffect(() => {
     if (workspaceId) {
@@ -206,23 +192,6 @@ function Workspace() {
     };
   }, []);
 
-  // File Sync
-  useEffect(() => {
-    socket.on("file-change", ({ fileId, content }) => {
-      isRemoteUpdate.current = true;
-
-      setFiles((prevFiles) =>
-        prevFiles.map((file) =>
-          file.id === fileId ? { ...file, content } : file,
-        ),
-      );
-    });
-
-    return () => {
-      socket.off("file-change");
-    };
-  }, []);
-
   useEffect(() => {
     socket.on("language-change", ({ fileId, language }) => {
       setFiles((prev) =>
@@ -286,61 +255,6 @@ function Workspace() {
   // }, [files, workspaceId]);
 
   const activeFile = files.find((file) => file.id === activeFileId);
-
-  async function handleEditorChange(value: string) {
-    if (isRemoteUpdate.current) {
-      isRemoteUpdate.current = false;
-      return;
-    }
-
-    socket.emit("typing", {
-      workspaceId,
-      username,
-      fileId: activeFileId,
-    });
-
-    clearTimeout(typingTimeout.current);
-
-    typingTimeout.current = setTimeout(() => {
-      socket.emit("stop-typing", {
-        workspaceId,
-        username,
-      });
-    }, 1000);
-
-    setFiles((prevFiles) =>
-      prevFiles.map((file) =>
-        file.id === activeFileId
-          ? {
-              ...file,
-              content: value,
-            }
-          : file,
-      ),
-    );
-
-    clearTimeout(saveTimeout.current);
-
-    saveTimeout.current = setTimeout(async () => {
-      try {
-        await updateFileContentApi(activeFileId, value);
-
-        console.log("Database saved:", activeFileId);
-      } catch (error: any) {
-        if (error.response?.status === 404) {
-          setNotFound(true);
-        }
-
-        console.error(error);
-      }
-    }, 1000);
-
-    socket.emit("file-change", {
-      workspaceId,
-      fileId: activeFileId,
-      content: value,
-    });
-  }
 
   async function handleLanguageChange(language: string) {
     setFiles((prev) =>
@@ -535,8 +449,6 @@ function Workspace() {
 
         <div style={{ flex: 1 }}>
           <CodeEditor
-            value={activeFile?.content || ""}
-            onChange={handleEditorChange}
             workspaceId={workspaceId || ""}
             username={username}
             activeFileId={activeFileId}
