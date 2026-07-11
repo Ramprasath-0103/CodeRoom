@@ -1,7 +1,13 @@
 import { useState } from "react";
-import { executeCode } from "../pistonApi";
+import { executeCode } from "../executeApi";
+import "./Output.css";
 
-export default function Output({ editorRef, language }) {
+interface OutputProps {
+  editorRef: React.RefObject<any>;
+  language: string;
+}
+
+export default function Output({ editorRef, language }: OutputProps) {
   const [output, setOutput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -14,7 +20,9 @@ export default function Output({ editorRef, language }) {
       setIsLoading(true);
       setIsError(false);
       const result = await executeCode(language, sourceCode);
-      setOutput(result.run?.output || result.run?.stdout || "");
+      const hasError = result.stderr || result.compile_output;
+      setIsError(Boolean(hasError));
+      setOutput(hasError || result.stdout || result.message || "");
     } catch (error) {
       console.log("Error executing code:", error);
       setIsError(true);
@@ -24,35 +32,18 @@ export default function Output({ editorRef, language }) {
   };
 
   return (
-    <div style={{ marginTop: "20px" }}>
-      <button
-        onClick={runCode}
-        style={{
-          padding: "10px 20px",
-          fontSize: "12px",
-          backgroundColor: "rgba(21, 20, 20, 1)",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-        }}
-      >
-        Run Code
-      </button>
-      <div
-        style={{
-          marginTop: "20px",
-          padding: "10px",
-          backgroundColor: "#201d1dff",
-          borderRadius: "4px",
-          minHeight: "90vh",
-        }}
-      >
-        {isLoading ? (
-          <p>Loading...</p>
-        ) : isError ? (
-          <p style={{ color: "red" }}>Error executing code.</p>
-        ) : (
+    <div className="output-panel">
+      <div className="output-run-row">
+        <button className="primary" onClick={runCode} disabled={isLoading}>
+          {isLoading ? "Running..." : "Run Code"}
+        </button>
+      </div>
+
+      <div className={`output-box ${isError ? "error" : ""}`}>
+        {output ? (
           <pre>{output}</pre>
+        ) : (
+          <span className="output-empty">Output will appear here.</span>
         )}
       </div>
     </div>

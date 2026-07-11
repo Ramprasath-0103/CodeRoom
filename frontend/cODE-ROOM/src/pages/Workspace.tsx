@@ -3,11 +3,13 @@ import { useState, useEffect, useRef } from "react";
 import CodeEditor from "../components/CodeEditor";
 import FileExplorer from "../components/FileExplorer";
 import { socket } from "../socket";
-import { api, createFile, renameFileApi, updateFileLanguageApi } from "../api";
+import { api, createFile, renameFileApi } from "../api";
 import { deleteFileApi } from "../api";
 import { connectYjsProvider } from "../hocuspocus";
-import { colorIndexForUser } from "../awarenessColor";
+import { colorIndexForUser, PALETTE } from "../awarenessColor";
+import { languageFromFilename } from "../constants";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
+import "./Workspace.css";
 
 function Workspace() {
   const { workspaceId } = useParams();
@@ -194,25 +196,6 @@ function Workspace() {
   }, []);
 
   useEffect(() => {
-    socket.on("language-change", ({ fileId, language }) => {
-      setFiles((prev) =>
-        prev.map((file) =>
-          file.id === fileId
-            ? {
-                ...file,
-                language,
-              }
-            : file,
-        ),
-      );
-    });
-
-    return () => {
-      socket.off("language-change");
-    };
-  }, []);
-
-  useEffect(() => {
     socket.on("create-file", ({ file }) => {
       setFiles((prev) => [...prev, file]);
     });
@@ -241,46 +224,8 @@ function Workspace() {
     };
   }, []);
 
-  useEffect(() => {
-    socket.on("message", (msg) => {
-      console.log("Received:", msg);
-    });
-
-    return () => {
-      socket.off("message");
-    };
-  }, []);
-
-  // useEffect(() => {
-  //   localStorage.setItem(`workspace-${workspaceId}`, JSON.stringify(files));
-  // }, [files, workspaceId]);
-
   const activeFile = files.find((file) => file.id === activeFileId);
-
-  async function handleLanguageChange(language: string) {
-    setFiles((prev) =>
-      prev.map((file) =>
-        file.id === activeFileId
-          ? {
-              ...file,
-              language,
-            }
-          : file,
-      ),
-    );
-
-    try {
-      await updateFileLanguageApi(activeFileId, language);
-    } catch (error) {
-      console.error(error);
-    }
-
-    socket.emit("language-change", {
-      workspaceId,
-      fileId: activeFileId,
-      language,
-    });
-  }
+  const activeLanguage = languageFromFilename(activeFile?.name);
 
   async function renameFile(fileId: string) {
     const newName = prompt("Enter new file name");
@@ -366,79 +311,48 @@ function Workspace() {
     }
   }
 
-  function testRoom() {
-    socket.emit("message", {
-      workspaceId,
-      message: "hello",
-    });
-  }
-
   if (loading) {
-    return <h2>Loading workspace...</h2>;
+    return <div className="workspace-status">Loading workspace...</div>;
   }
 
   if (notFound) {
-    return <h2>Workspace not found.</h2>;
+    return <div className="workspace-status">Workspace not found.</div>;
   }
 
   return (
-    <div>
-      <h1>Workspace : {workspaceId}</h1>
+    <div className="workspace">
+      <header className="workspace-header">
+        <div className="workspace-title">
+          <h1>CodeCollab</h1>
+          <span className="workspace-id">{workspaceId}</span>
+        </div>
 
-      <h3>Online Users ({users.length})</h3>
+        <div className="presence">
+          {users.map((user) => (
+            <div className="presence-user" key={user.socketId}>
+              <span
+                className="dot"
+                style={{
+                  background: PALETTE[colorIndexForUser(user.username)],
+                }}
+              />
+              {user.username}
+              {cursorPositions[user.username]?.line != null && (
+                <span>
+                  {" "}
+                  · {files.find(
+                    (f) => f.id === cursorPositions[user.username].fileId,
+                  )?.name || "?"}{" "}
+                  L{cursorPositions[user.username].line}:
+                  {cursorPositions[user.username].column}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </header>
 
-      <ul>
-        {users.map((user) => (
-          <li
-            key={user.socketId}
-            style={{
-              marginBottom: "10px",
-            }}
-          >
-            🟢 {user.username}
-            {cursorPositions[user.username]?.line != null && (
-              <>
-                {" "}
-                [
-                {files.find(
-                  (f) => f.id === cursorPositions[user.username].fileId,
-                )?.name || "Unknown"}
-                ] (L
-                {cursorPositions[user.username].line}
-                :C
-                {cursorPositions[user.username].column})
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      <h3>Activity</h3>
-
-      <ul>
-        {notifications.slice(0, 5).map((msg, index) => (
-          <li key={index}>{msg}</li>
-        ))}
-      </ul>
-
-      <h3>Typing</h3>
-
-      <ul>
-        {Object.entries(typingUsers).map(([username, data]: any) => (
-          <li key={username}>
-            ✍️ {username} typing in{" "}
-            {files.find((f) => f.id === data.fileId)?.name || "Unknown"}
-          </li>
-        ))}
-      </ul>
-
-      <button onClick={testRoom}>Test Room</button>
-
-      <div
-        style={{
-          display: "flex",
-        }}
-      >
+      <div className="workspace-body">
         <FileExplorer
           files={files}
           activeFileId={activeFileId}
@@ -448,17 +362,47 @@ function Workspace() {
           deleteFile={deleteFile}
         />
 
-        <div style={{ flex: 1 }}>
+        <div className="workspace-main">
           <CodeEditor
             providerRef={providerRef}
             workspaceId={workspaceId || ""}
             username={username}
             activeFileId={activeFileId}
-            language={activeFile?.language ?? "javascript"}
-            onLanguageChange={handleLanguageChange}
+            language={activeLanguage}
             cursorPositions={cursorPositions}
           />
         </div>
+
+        <aside className="activity-panel">
+          <section>
+            <h3>Activity</h3>
+            {notifications.length === 0 ? (
+              <p className="activity-empty">No activity yet.</p>
+            ) : (
+              <ul>
+                {notifications.slice(0, 5).map((msg, index) => (
+                  <li key={index}>{msg}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section>
+            <h3>Typing</h3>
+            {Object.keys(typingUsers).length === 0 ? (
+              <p className="activity-empty">No one is typing.</p>
+            ) : (
+              <ul>
+                {Object.entries(typingUsers).map(([username, data]: any) => (
+                  <li key={username}>
+                    {username} in{" "}
+                    {files.find((f) => f.id === data.fileId)?.name || "?"}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </aside>
       </div>
     </div>
   );

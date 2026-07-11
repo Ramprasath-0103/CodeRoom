@@ -1,9 +1,11 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import workspaceRouter from "./workspace.js";
 import http from "http";
 import { initializeSocket } from "./socket.js";
 import fileRouter from "../routes/file.js";
+import executeRouter from "../routes/execute.js";
 import { hocuspocusServer } from "./hocuspocus.js";
 
 const app = express();
@@ -15,6 +17,8 @@ app.use(express.json());
 app.use("/workspace", fileRouter);
 
 app.use("/workspace", workspaceRouter);
+
+app.use("/execute", executeRouter);
 
 app.get("/", (req, res) => {
   res.json({

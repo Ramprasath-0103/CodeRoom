@@ -1,3 +1,5 @@
+import "./FileExplorer.css";
+
 interface FileType {
   id: string;
   name: string;
@@ -22,58 +24,32 @@ function FileExplorer({
   deleteFile,
 }: FileExplorerProps) {
   return (
-    <div
-      style={{
-        width: "250px",
-        borderRight: "1px solid gray",
-        padding: "10px",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "10px",
-        }}
-      >
+    <div className="file-explorer">
+      <div className="file-explorer-header">
         <h3>Files</h3>
 
-        <button onClick={addFile}>+</button>
+        <button className="icon" onClick={addFile}>
+          +
+        </button>
       </div>
 
       {files.map((file) => (
         <div
           key={file.id}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "8px",
-            marginBottom: "4px",
-            backgroundColor: file.id === activeFileId ? "#333" : "transparent",
-            color: file.id === activeFileId ? "white" : "inherit",
-          }}
+          className={`file-row ${file.id === activeFileId ? "active" : ""}`}
         >
-          <span
-            onClick={() => setActiveFileId(file.id)}
-            style={{
-              cursor: "pointer",
-              flex: 1,
-            }}
-          >
+          <span className="file-name" onClick={() => setActiveFileId(file.id)}>
             {file.name}
           </span>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "4px",
-            }}
-          >
-            <button onClick={() => renameFile(file.id)}>✏️</button>
+          <div className="file-actions">
+            <button className="icon" onClick={() => renameFile(file.id)}>
+              ✏️
+            </button>
 
-            <button onClick={() => deleteFile(file.id)}>🗑️</button>
+            <button className="icon" onClick={() => deleteFile(file.id)}>
+              🗑️
+            </button>
           </div>
         </div>
       ))}

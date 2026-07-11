@@ -1,5 +1,4 @@
 import Editor from "@monaco-editor/react";
-import LanguageSelector from "./LanguageSelector";
 import { useRef, useEffect } from "react";
 import { CODE_SNIPPETS } from "../constants";
 import Output from "./Output";
@@ -8,6 +7,7 @@ import { getYText } from "../yjs";
 import { bindMonacoToYText } from "../yjsBinding";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import "../awareness.css";
+import "./CodeEditor.css";
 
 interface CodeEditorProps {
   providerRef: React.RefObject<HocuspocusProvider | null>;
@@ -15,7 +15,6 @@ interface CodeEditorProps {
   username: string;
   activeFileId: string;
   language: string;
-  onLanguageChange: (lang: string) => void;
 
   cursorPositions: Record<string, any>;
 }
@@ -26,13 +25,13 @@ function CodeEditor({
   username,
   activeFileId,
   language,
-  onLanguageChange,
   cursorPositions,
 }: CodeEditorProps) {
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
 
   const activeFileIdRef = useRef(activeFileId);
+  const languageRef = useRef(language);
   const unbindYTextRef = useRef<(() => void) | null>(null);
   const typingTimeoutRef = useRef<any>(null);
   const decorationIdsRef = useRef<string[]>([]);
@@ -42,18 +41,19 @@ function CodeEditor({
   }, [activeFileId]);
 
   useEffect(() => {
+    languageRef.current = language;
+  }, [language]);
+
+  useEffect(() => {
     return () => {
       unbindYTextRef.current?.();
     };
   }, []);
 
-  function onSelect(lang: string) {
-    onLanguageChange(lang);
-
-    const ytext = getYText(activeFileIdRef.current);
-
+  function seedIfEmpty(ytext: ReturnType<typeof getYText>) {
     if (ytext.length === 0) {
-      ytext.insert(0, CODE_SNIPPETS[lang] ?? "");
+      const snippet = CODE_SNIPPETS[languageRef.current];
+      if (snippet) ytext.insert(0, snippet);
     }
   }
 
@@ -64,7 +64,7 @@ function CodeEditor({
     editor.focus();
 
     const ytext = getYText(activeFileIdRef.current);
-    unbindYTextRef.current = bindMonacoToYText(editor, ytext, () => {
+    unbindYTextRef.current = bindMonacoToYText(editor, monaco, ytext, () => {
       socket.emit("typing", {
         workspaceId,
         username,
@@ -80,6 +80,15 @@ function CodeEditor({
         });
       }, 1000);
     });
+
+    // Only seed the starter snippet once the shared doc has loaded, so we
+    // don't drop a duplicate copy on top of already-synced content.
+    const provider = providerRef.current;
+    if (provider?.synced) {
+      seedIfEmpty(ytext);
+    } else {
+      provider?.on("synced", () => seedIfEmpty(ytext));
+    }
 
     editor.onDidChangeCursorPosition((e: any) => {
       providerRef.current?.awareness?.setLocalStateField("cursor", {
@@ -162,25 +171,10 @@ function CodeEditor({
   }, [cursorPositions, activeFileId, username]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 16,
-        height: "90vh",
-      }}
-    >
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <LanguageSelector language={language} onSelect={onSelect} />
-
+    <div className="editor-shell">
+      <div className="editor-pane">
         <Editor
           key={activeFileId}
-          height="90vh"
           language={language}
           defaultValue=""
           theme="vs-dark"
@@ -188,14 +182,7 @@ function CodeEditor({
         />
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          overflow: "auto",
-        }}
-      >
-        <br />
-
+      <div className="output-pane">
         <Output editorRef={editorRef} language={language} />
       </div>
     </div>

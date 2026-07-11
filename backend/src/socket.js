@@ -79,18 +79,6 @@ export function initializeSocket(server) {
       }
     );
 
-    socket.on(
-  "language-change",
-  ({ workspaceId, language }) => {
-    socket.to(workspaceId).emit(
-      "language-change",
-      {
-        language,
-      }
-    );
-  }
-);
-
     // File Explorer Sync
     socket.on("create-file", (data) => {
       socket
@@ -109,17 +97,6 @@ export function initializeSocket(server) {
         .to(data.workspaceId)
         .emit("delete-file", data);
     });
-
-    // Test Messages
-    socket.on(
-      "message",
-      ({ workspaceId, message }) => {
-        io.to(workspaceId).emit(
-          "message",
-          message
-        );
-      }
-    );
 
     // Disconnect
     socket.on("disconnect", () => {

@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.35.0",
     "@hocuspocus/provider": "^4.3.0",
     "@monaco-editor/react": "^4.7.0",
     "axios": "^1.17.0",

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import "./Home.css";
 
 function Home() {
   const navigate = useNavigate();
@@ -31,38 +32,44 @@ function Home() {
   }
 
   return (
-    <div>
-      <h1>CodeCollab</h1>
+    <div className="home">
+      <div className="home-card">
+        <h1>CodeCollab</h1>
 
-      <button onClick={createWorkspace}>Create Workspace</button>
+        <button className="primary" onClick={createWorkspace}>
+          Create Workspace
+        </button>
 
-      {lastWorkspace && (
-        <>
-          <hr />
+        {lastWorkspace && (
+          <>
+            <hr className="home-divider" />
 
-          <h3>Continue Last Workspace</h3>
+            <div className="home-section-label">Continue Last Workspace</div>
 
-          <button onClick={() => navigate(`/workspace/${lastWorkspace}`)}>
-            {lastWorkspace}
-          </button>
-        </>
-      )}
+            <button onClick={() => navigate(`/workspace/${lastWorkspace}`)}>
+              {lastWorkspace}
+            </button>
+          </>
+        )}
 
-      <hr />
+        <hr className="home-divider" />
 
-      <input
-        type="text"
-        placeholder="Enter Workspace ID"
-        value={workspaceId}
-        onChange={(e) => setWorkspaceId(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            joinWorkspace();
-          }
-        }}
-      />
+        <div className="home-join-row">
+          <input
+            type="text"
+            placeholder="Enter Workspace ID"
+            value={workspaceId}
+            onChange={(e) => setWorkspaceId(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                joinWorkspace();
+              }
+            }}
+          />
 
-      <button onClick={joinWorkspace}>Join Workspace</button>
+          <button onClick={joinWorkspace}>Join</button>
+        </div>
+      </div>
     </div>
   );
 }
