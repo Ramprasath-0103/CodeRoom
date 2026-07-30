@@ -3,9 +3,9 @@ import { useRef, useEffect } from "react";
 import { CODE_SNIPPETS } from "../constants";
 import Output from "./Output";
 import { socket } from "../socket";
-import { getYText } from "../yjs";
 import { bindMonacoToYText } from "../yjsBinding";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
+import type * as Y from "yjs";
 import "../awareness.css";
 import "./CodeEditor.css";
 
@@ -50,7 +50,7 @@ function CodeEditor({
     };
   }, []);
 
-  function seedIfEmpty(ytext: ReturnType<typeof getYText>) {
+  function seedIfEmpty(ytext: Y.Text) {
     if (ytext.length === 0) {
       const snippet = CODE_SNIPPETS[languageRef.current];
       if (snippet) ytext.insert(0, snippet);
@@ -63,7 +63,15 @@ function CodeEditor({
 
     editor.focus();
 
-    const ytext = getYText(activeFileIdRef.current);
+    // Tear down any binding from a previously mounted editor (the editor
+    // remounts on file switch via its key) before creating a new one.
+    unbindYTextRef.current?.();
+
+    const provider = providerRef.current;
+    const doc = provider?.document;
+    if (!doc) return;
+
+    const ytext = doc.getText(activeFileIdRef.current);
     unbindYTextRef.current = bindMonacoToYText(editor, monaco, ytext, () => {
       socket.emit("typing", {
         workspaceId,
@@ -83,11 +91,10 @@ function CodeEditor({
 
     // Only seed the starter snippet once the shared doc has loaded, so we
     // don't drop a duplicate copy on top of already-synced content.
-    const provider = providerRef.current;
-    if (provider?.synced) {
+    if (provider.synced) {
       seedIfEmpty(ytext);
     } else {
-      provider?.on("synced", () => seedIfEmpty(ytext));
+      provider.on("synced", () => seedIfEmpty(ytext));
     }
 
     editor.onDidChangeCursorPosition((e: any) => {

@@ -1,5 +1,4 @@
 import * as Y from "yjs";
-import { ydoc } from "./yjs";
 
 export function bindMonacoToYText(
   editor: any,
@@ -25,7 +24,7 @@ export function bindMonacoToYText(
 
     onLocalChange?.();
 
-    ydoc.transact(() => {
+    ytext.doc!.transact(() => {
       event.changes
         .slice()
         .sort((a: any, b: any) => b.rangeOffset - a.rangeOffset)
