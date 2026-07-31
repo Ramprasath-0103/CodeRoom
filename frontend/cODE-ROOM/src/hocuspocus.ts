@@ -1,4 +1,5 @@
 import { HocuspocusProvider } from "@hocuspocus/provider";
+import { WS_URL } from "./config";
 
 // Each workspace gets its own provider, and the provider owns its own Y.Doc
 // (accessible via `provider.document`). Never share a Y.Doc across workspaces:
@@ -6,7 +7,7 @@ import { HocuspocusProvider } from "@hocuspocus/provider";
 // doc would bleed one workspace's file contents into another.
 export function connectYjsProvider(workspaceId: string) {
   return new HocuspocusProvider({
-    url: "ws://localhost:1234",
+    url: WS_URL,
     name: workspaceId,
   });
 }

@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "type": "module",
   "main": "src/index.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@hocuspocus/server": "^4.3.0",
@@ -16,7 +20,7 @@
     "express": "^5.2.1",
     "prisma": "^6.19.3",
     "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3",
+    "ws": "^8.21.0",
     "yjs": "^13.6.31"
   },
   "devDependencies": {
