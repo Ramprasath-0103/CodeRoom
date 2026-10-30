@@ -1,0 +1,13 @@
+.status-screen {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-muted);
+}
+
+.status-screen a {
+  color: var(--accent-hover);
+}

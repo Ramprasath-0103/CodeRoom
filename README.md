@@ -1,125 +1,147 @@
 # CodeRoom
 
-A real-time collaborative code editor. Multiple people open the same
-workspace, edit the same files, and see each other's cursors, selections,
-and changes live — powered by a hand-rolled CRDT sync layer, not a
-drop-in library.
+A real-time collaborative code editor. Create a workspace, share the link, and
+everyone edits the same files together with live cursors, presence and
+in-browser code execution.
 
 **Live demo:** https://code-room-xi.vercel.app
 
-## What it does
+## Features
 
-- **Multi-file workspaces** — create a workspace, share the link, add/rename/delete files
-- **Live collaborative editing** — every keystroke syncs to everyone in the workspace in real time
-- **Colored cursors & live selections** — see exactly where everyone else is looking and selecting
-- **Presence & typing indicators** — who's online, who's typing, who joined/left
-- **Persistence** — content survives reloads and reconnects, backed by Postgres
-- **Language auto-detection** — name a file `.py`, `.cpp`, `.js`, etc. and it just works, with a starter snippet if the file is empty
-- **In-browser code execution** — run the code and see the output (via Judge0)
-
-## Why this isn't just "another CRDT editor tutorial"
-
-Most collaborative-editor projects wire up [`y-monaco`](https://github.com/yjs/y-monaco)
-and call it done. This project deliberately does **not** use that library —
-the Monaco ↔ Yjs binding ([`yjsBinding.ts`](frontend/cODE-ROOM/src/yjsBinding.ts))
-is hand-written: it translates Monaco's edit events into Yjs `Y.Text` deltas
-and applies remote Yjs deltas back into Monaco via `applyEdits` — not
-`setValue`, which would reset every collaborator's cursor to line 1 on every
-remote keystroke (a real bug this project hit and fixed).
-
-Sync and persistence run through [Hocuspocus](https://tiptap.dev/hocuspocus)
-(a Yjs backend), while presence, typing indicators, and file-tree events run
-over a separate Socket.IO channel — both consolidated onto a single backend
-port for deployment.
-
-## Tech stack
-
-**Frontend** — React, TypeScript, Vite, Monaco Editor, Yjs, `@hocuspocus/provider`, Socket.IO client
-
-**Backend** — Node.js, Express, Socket.IO, `@hocuspocus/server`, Prisma, PostgreSQL
-
-**Testing** — Vitest, covering CRDT convergence under concurrent edits and the
-Monaco↔Yjs binding itself (against a faithful fake Monaco model), not just
-trivial utility functions
+- **Multi-file workspaces** — create, rename and delete files; changes appear for everyone instantly
+- **Live collaborative editing** — concurrent edits merge automatically, even after going offline
+- **Per-user undo** — `Ctrl/Cmd+Z` undoes only your own changes, never a teammate's
+- **Cursors, selections and presence** — see who is here, which file they are in and who is typing
+- **Connection status** — a badge shows when you are live, reconnecting or offline
+- **Language detection** — the file extension picks syntax highlighting and a starter snippet
+- **Run code** — C, C++, C#, Go, Java, JavaScript, PHP, Python, Ruby, Rust and TypeScript via Judge0
 
 ## Architecture
 
 ```
-Monaco Editor
-     │  edit events / remote deltas (applyEdits, cursor-preserving)
-     ▼
- Y.Text (per file, inside a per-workspace Y.Doc)
-     │
-     ▼
-Hocuspocus Provider ──ws──▶ Hocuspocus Server ──▶ Postgres (persisted state)
-                                    │
-Socket.IO  ────────────────────────┘  (presence, typing, file-tree events —
-                                        shares the same HTTP port)
+ Browser (React + Monaco)                      Backend (Node.js, one port)
+┌─────────────────────────────┐               ┌──────────────────────────────────┐
+│ Monaco editor               │               │ Express                          │
+│   ⇅ textBinding.ts          │   REST        │   POST /api/workspaces           │
+│ Y.Doc (one per workspace)   │ ───────────▶  │   GET  /api/workspaces/:id       │
+│   files: Y.Map              │               │   POST /api/execute ──▶ Judge0   │
+│ Awareness (presence)        │   WebSocket   │                                  │
+│ HocuspocusProvider          │ ◀──────────▶  │ Hocuspocus at /collaboration     │
+└─────────────────────────────┘               │   onConnect: workspace exists?   │
+                                              │   onLoad / onStore ──▶ Postgres  │
+                                              └──────────────────────────────────┘
 ```
 
-Each **workspace gets its own `Y.Doc`**, owned by its Hocuspocus provider —
-not a shared global doc — so switching workspaces in one tab can't leak one
-workspace's content into another.
+Everything people share lives in **one Yjs document per workspace**:
+
+```
+Y.Doc
+└── files: Y.Map<fileId, Y.Map>
+        ├── name: string
+        ├── createdAt: number
+        └── content: Y.Text
+```
+
+Short-lived state such as names, colours, cursors, the open file and typing
+status is shared through Yjs **awareness**, which is never saved.
+
+In three sentences: all shared state sits in one Yjs document per workspace, so
+concurrent changes merge without conflicts. Hocuspocus syncs that document over
+a single WebSocket and saves it to Postgres as bytes. Express only creates
+workspaces and forwards code to Judge0.
+
+## Design decisions
+
+| Decision | Why |
+| --- | --- |
+| CRDT (Yjs) instead of operational transforms | Edits merge correctly with no central ordering, and offline edits sync on reconnect |
+| File tree inside the Y.Doc, not a separate table plus socket events | One source of truth, so creates, renames and deletes get the same sync, persistence and reconnect handling as text |
+| Files as nested `Y.Map` entries, not top-level `Y.Text`s | Nested types can be deleted; deleting a file really removes its content |
+| Awareness for presence, cursors and typing | Built into the Yjs protocol and cleaned up automatically when a client disconnects |
+| Cursor positions stored as Yjs relative positions | Remote cursors stay on the right character while others type above them |
+| `Y.UndoManager` with a local origin | Undo only reverts your own edits |
+| Single HTTP port for REST and WebSocket | Free hosts such as Render expose one port |
+| Single backend instance | Simple to run and explain; scaling out would need the Hocuspocus Redis extension |
 
 ## Project structure
 
 ```
 backend/
+  prisma/schema.prisma           Workspace table (id, yjsState, timestamps)
+  scripts/
+    migrateLegacyWorkspaces.js   One-off upgrade from the old File-table format
   src/
-    index.js        # Express app + single-port Socket.IO/Hocuspocus wiring
-    socket.js        # presence, typing, cursor/file-tree relay
-    hocuspocus.js    # Yjs doc load/store hooks (Postgres persistence)
-    prisma.js
-  routes/
-    file.js          # file CRUD REST endpoints
-    execute.js        # proxies code execution to Judge0 (keeps API key server-side)
-  prisma/schema.prisma
+    server.js                    HTTP server, WebSocket wiring, graceful shutdown
+    app.js                       Express app and middleware
+    config/                      Environment variables and allowed origins
+    database/                    Prisma client
+    errors/                      HttpError
+    middleware/                  Error handler, 404 handler, rate limiter
+    workspaces/                  Routes → service → repository, workspace ids
+    execution/                   Run-code routes, Judge0 client, language ids
+    collaboration/               Hocuspocus server, upgrade handler, document helpers
+  tests/                         Vitest + Supertest, including a live two-client sync test
 
-frontend/cODE-ROOM/
+frontend/
   src/
-    yjsBinding.ts     # the hand-rolled Monaco <-> Y.Text bridge
-    hocuspocus.ts     # per-workspace provider setup
-    awarenessColor.ts # deterministic per-user cursor colors
-    components/       # CodeEditor, FileExplorer, Output
-    pages/            # Home, Workspace
-    __tests__/        # CRDT + binding + utility tests
+    api/                         Fetch wrapper and REST calls
+    collaboration/               Yjs document helpers, Monaco binding, cursors, presence
+    hooks/                       Connection, files, presence and display-name hooks
+    components/                  Editor, file explorer, output, presence, activity
+    pages/                       Home, workspace route and workspace page
+    styles/                      Global styles and remote cursor colours
+    utils/                       Languages, colours, storage, ids
+    __tests__/                   Document, binding, presence and utility tests
 ```
 
 ## Running locally
 
-Requires Node 22+ and a Postgres database (e.g. a free [Supabase](https://supabase.com) project).
+Requires Node 22+ and Postgres. The quickest way to get Postgres is Docker:
+
+```bash
+docker compose up -d
+```
 
 **Backend**
+
 ```bash
 cd backend
-cp .env.example .env   # fill in DATABASE_URL (and RAPIDAPI_KEY if you want code execution)
+cp .env.example .env
 npm install
-npx prisma db push
-npm run dev             # http://localhost:3000
+npm run db:push
+npm run dev
 ```
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | Postgres connection string |
+| `CLIENT_ORIGIN` | Comma-separated frontend origins allowed for REST and WebSocket; empty allows all |
+| `RAPIDAPI_KEY` | Judge0 CE key from RapidAPI; without it, Run Code explains that execution is not configured |
+| `PORT` | Defaults to 3000 |
 
 **Frontend**
+
 ```bash
-cd frontend/cODE-ROOM
-cp .env.example .env    # optional locally; defaults to localhost:3000
+cd frontend
+cp .env.example .env
 npm install
-npm run dev              # http://localhost:5173
+npm run dev
 ```
 
-**Tests**
+`VITE_API_URL` points at the backend; the WebSocket URL is derived from it.
+
+## Quality checks
+
 ```bash
-cd frontend/cODE-ROOM
-npm test
+cd backend && npm run lint && npm test
+cd frontend && npm run lint && npm test && npm run build
 ```
 
-## Deployment
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) — backend on Render, frontend on Vercel,
-database on Supabase. The backend runs Socket.IO and Hocuspocus on a single
-HTTP port so it fits a standard one-port host.
+GitHub Actions runs the same checks on every push and pull request.
 
 ## Known limitations
 
-- Code execution requires your own free [Judge0/RapidAPI](https://rapidapi.com/judge0-official/api/judge0-ce) key
-- No authentication — anyone with a workspace link can join and edit
-- Render's free tier sleeps after ~15 minutes idle (expect a cold-start delay on the first request)
+- No accounts: anyone with a workspace link can join and edit
+- Run Code executes only the active file and needs your own Judge0 key
+- One backend instance holds open documents in memory
+- Render's free tier sleeps after about 15 minutes idle, so the first request is slow
