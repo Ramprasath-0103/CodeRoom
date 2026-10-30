@@ -1,0 +1,87 @@
+.file-explorer {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border);
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.file-explorer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.file-explorer-header h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.file-explorer-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.file-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 4px 2px 0;
+  border-radius: var(--radius);
+  margin-bottom: 2px;
+}
+
+.file-row:hover {
+  background: var(--bg-hover);
+}
+
+.file-row.active {
+  background: var(--accent);
+  color: white;
+}
+
+.file-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 6px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-name:hover {
+  background: none;
+}
+
+.file-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0.6;
+}
+
+.file-row:hover .file-actions,
+.file-row.active .file-actions {
+  opacity: 1;
+}
+
+.file-name-form {
+  margin-bottom: 6px;
+}
+
+.file-name-form input {
+  width: 100%;
+}
+
+.file-name-error {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--danger);
+}

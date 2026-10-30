@@ -1,6 +1,11 @@
 node_modules/
+dist/
+coverage/
 .env
 .env.local
-.DS_Store
-dist/
+*.local
 *.log
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

@@ -1,74 +1,82 @@
 # Deployment Guide
 
-CodeRoom deploys as **two pieces**:
+CodeRoom deploys as three pieces:
 
-- **Backend** (Express + socket.io + Hocuspocus, all on one port) → **Render**
-- **Frontend** (Vite/React) → **Vercel**
-- **Database** → your existing **Supabase** Postgres (already set up)
+- **Backend** (Express + Hocuspocus on one port) → **Render**
+- **Frontend** (Vite + React) → **Vercel**
+- **Database** → **Supabase** Postgres
 
-The backend runs everything on a single port, so it fits Render's one-port web
-service. The frontend talks to it through a single env var (`VITE_API_URL`); the
-Yjs websocket URL is derived from it automatically.
+Deploy the backend first: the frontend needs its URL, and the backend needs the
+frontend's URL for its allowed origins.
 
-> Deploy the **backend first** — you need its URL to configure the frontend, and
-> the frontend's URL to lock down the backend's CORS. See "Wire them together".
+## 1. Backend on Render
 
----
-
-## 1. Backend → Render
-
-1. Push this repo to GitHub (if not already).
-2. On [render.com](https://render.com): **New → Web Service**, connect the repo.
-3. Settings:
-   - **Root Directory**: `backend`
-   - **Build Command**: `npm install`  (this runs `prisma generate` via postinstall)
-   - **Start Command**: `npm start`
-   - **Instance Type**: Free is fine for a demo (note: it sleeps after ~15 min
-     idle and cold-starts in ~30–60s).
-4. **Environment variables**:
-   | Key | Value |
-   |-----|-------|
-   | `DATABASE_URL` | your Supabase pooler connection string (same as local `.env`) |
-   | `RAPIDAPI_KEY` | your Judge0 key (optional — only for "Run Code") |
-   | `CLIENT_ORIGIN` | set **after** the frontend is deployed (step 3) |
-5. Deploy. Once live, note the URL, e.g. `https://coderoom-api.onrender.com`.
-   Visiting it should show `{"message":"Server Running"}`.
-
-Node is pinned to 22 via `backend/.node-version` (Hocuspocus requires it).
-
-## 2. Frontend → Vercel
-
-1. On [vercel.com](https://vercel.com): **Add New → Project**, import the repo.
+1. **New → Web Service**, connect the repository.
 2. Settings:
-   - **Root Directory**: `frontend/cODE-ROOM`
-   - Framework preset: **Vite** (auto-detected). Build/output defaults are correct.
-3. **Environment variable**:
-   | Key | Value |
-   |-----|-------|
-   | `VITE_API_URL` | your Render backend URL, e.g. `https://coderoom-api.onrender.com` |
-4. Deploy. Note the URL, e.g. `https://coderoom.vercel.app`.
+   - **Root Directory**: `backend`
+   - **Build Command**: `npm install` (runs `prisma generate`)
+   - **Start Command**: `npm start`
+   - **Health Check Path**: `/health`
+3. Environment variables:
 
-`vercel.json` already handles SPA routing so refreshing `/workspace/:id` works.
+   | Key | Value |
+   | --- | --- |
+   | `DATABASE_URL` | Supabase pooler connection string |
+   | `RAPIDAPI_KEY` | Judge0 key, optional |
+   | `CLIENT_ORIGIN` | Your Vercel URL, set after step 2 |
+
+4. Apply the schema from your machine against the production database:
+
+   ```bash
+   cd backend
+   DATABASE_URL="<production url>" npm run db:push
+   ```
+
+5. Deploy, then open `https://<your-service>.onrender.com/health`; it should return `{"status":"ok"}`.
+
+On redeploy Render sends `SIGTERM`; the server saves every open document before exiting.
+
+## 2. Frontend on Vercel
+
+1. **Add New → Project**, import the repository.
+2. **Root Directory**: `frontend` (it was `frontend/cODE-ROOM` before the restructure — update it in an existing project).
+3. Environment variable `VITE_API_URL` = your Render URL.
+4. Deploy. `vercel.json` rewrites every path to `index.html`, so refreshing `/workspace/:id` works.
 
 ## 3. Wire them together
 
-1. Back in **Render**, set `CLIENT_ORIGIN` to your Vercel URL
-   (e.g. `https://coderoom.vercel.app`) and redeploy. This restricts CORS to
-   your frontend.
-2. If you set `VITE_API_URL` after the first Vercel build, **redeploy** the
-   frontend so the value is baked into the bundle (Vite inlines env vars at
-   build time).
+1. Set `CLIENT_ORIGIN` on Render to the Vercel URL and redeploy. It restricts both
+   REST calls and WebSocket connections to your frontend.
+2. If `VITE_API_URL` changed after the first Vercel build, redeploy the frontend:
+   Vite bakes environment variables in at build time.
+
+## Upgrading a database created by the old version
+
+Older versions stored the file list in a `File` table and file contents as
+top-level texts in `Workspace.yjsState`. To keep existing workspaces:
+
+1. Suspend the Render service so nobody writes in the old format during the upgrade.
+2. Convert workspaces to the new document format:
+
+   ```bash
+   cd backend
+   DATABASE_URL="<production url>" npm run db:migrate-legacy
+   ```
+
+   The script is safe to run twice; already converted workspaces are skipped.
+3. Update the schema, which drops the `File` table and adds `updatedAt`:
+
+   ```bash
+   DATABASE_URL="<production url>" npx prisma db push --accept-data-loss
+   ```
+
+4. Deploy the new backend and frontend, then resume the service.
 
 ## Verify
 
-Open the Vercel URL in two browser tabs on the same `/workspace/:id`:
-- Typing in one appears in the other (Yjs sync).
-- Coloured cursors/selections track between tabs (awareness).
-- The online-users list and typing indicator update (socket.io).
+Open the Vercel URL in two browser windows on the same `/workspace/:id`:
 
-## Notes
-
-- **Schema changes**: the schema is already applied to Supabase. If you change
-  `schema.prisma`, run `npx prisma db push` locally against the prod database.
-- **Cold starts**: on Render Free the first request after idle takes ~a minute.
-  For a live demo, hit the backend URL once to wake it before presenting.
+- Typing in one appears in the other
+- Coloured cursors and selections follow each person
+- Creating, renaming and deleting files updates both windows
+- Stopping the backend shows **Offline**; edits made meanwhile sync after it returns

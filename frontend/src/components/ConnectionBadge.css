@@ -1,0 +1,23 @@
+.connection-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.connection-badge-connected .dot {
+  background: var(--success);
+}
+
+.connection-badge-connecting .dot {
+  background: var(--warning);
+}
+
+.connection-badge-disconnected .dot {
+  background: var(--danger);
+}
+
+.connection-badge-disconnected {
+  color: var(--danger);
+}

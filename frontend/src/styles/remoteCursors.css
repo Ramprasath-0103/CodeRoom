@@ -1,0 +1,31 @@
+.remote-caret {
+  position: absolute;
+  height: 100%;
+  border-left: 2px solid;
+  margin-left: -1px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.remote-caret-0 { border-color: var(--user-color-0); }
+.remote-caret-1 { border-color: var(--user-color-1); }
+.remote-caret-2 { border-color: var(--user-color-2); }
+.remote-caret-3 { border-color: var(--user-color-3); }
+.remote-caret-4 { border-color: var(--user-color-4); }
+.remote-caret-5 { border-color: var(--user-color-5); }
+.remote-caret-6 { border-color: var(--user-color-6); }
+.remote-caret-7 { border-color: var(--user-color-7); }
+
+.remote-selection-0 { background-color: rgba(229, 115, 115, 0.25); }
+.remote-selection-1 { background-color: rgba(100, 181, 246, 0.25); }
+.remote-selection-2 { background-color: rgba(129, 199, 132, 0.25); }
+.remote-selection-3 { background-color: rgba(255, 183, 77, 0.25); }
+.remote-selection-4 { background-color: rgba(186, 104, 200, 0.25); }
+.remote-selection-5 { background-color: rgba(77, 208, 225, 0.25); }
+.remote-selection-6 { background-color: rgba(240, 98, 146, 0.25); }
+.remote-selection-7 { background-color: rgba(161, 136, 127, 0.25); }
+
+.editor-loading {
+  color: var(--text-muted);
+  padding: 16px;
+}

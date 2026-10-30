@@ -9,18 +9,7 @@ datasource db {
 
 model Workspace {
   id        String   @id
-  createdAt DateTime @default(now())
-  files     File[]
   yjsState  Bytes?
-}
-
-model File {
-  id          String @id
-  name        String
-  content     String
-  language    String @default("javascript")
-
-  workspaceId String
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }

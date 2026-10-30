@@ -1,0 +1,31 @@
+.activity-panel {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  border-left: 1px solid var(--border);
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.activity-panel h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.activity-panel section + section {
+  margin-top: 20px;
+}
+
+.activity-panel li {
+  font-size: 12px;
+  padding: 4px 0;
+  color: var(--text);
+}
+
+.activity-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+}
